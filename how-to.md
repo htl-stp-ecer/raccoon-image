@@ -79,6 +79,73 @@ sudo sh ./wallaby_flash
 sudo apt-get install python3 python3-pip
 ```
 
+# Setup touch display (Dev Machine)
+
+Make sure to have your SD card plugged in to your host machine with a reader or other device.
+
+### Requirements
+```bash
+sudo apt install git bc bison flex libssl-dev make libc6-dev libncurses5-dev -y
+sudo apt install crossbuild-essential-arm64 -y
+```
+### Clone Repositories
+The Raspberry Pi Linux repository is fairly large and may take some time to download
+```bash
+git clone --depth=1 https://github.com/raspberrypi/linux
+git clone https://github.com/kipr/wombat-os
+```
+
+### Build Kernel
+```bash
+cd linux
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- bcm2711_defconfig
+```
+
+### Add Config Files
+```bash
+sed -i 's/# CONFIG_TOUCHSCREEN_TSC2007 is not set/CONFIG_TOUCHSCREEN_TSC2007=m/' .config
+sudo cp wombat-os/configFiles/tsc2007-overlay.dts linux/arch/arm64/boot/dts/overlays/tsc2007-overlay.dts
+sudo cp wombat-os/configFiles/Makefile linux/arch/arm64/boot/dts/overlays/Makefile
+```
+
+### Copy Files to Boot and Root
+Give permissions to mnt directory
+```bash
+sudo chmod 777 mnt
+```
+
+Make sure your mount directories are actually sda and not something else
+```bash
+lsblk
+mkdir mnt && mkdir mnt/boot && mkdir mnt/root
+sudo mount /dev/sda1 mnt/boot
+sudo mount /dev/sda2 mnt/root
+```
+```bash
+sudo cp wombat-os/splash.png linux/mnt/root/usr/share/plymouth/themes/pix/splash.png
+sudo cp wombat-os/wombat.jpg linux/mnt/root/usr/share/rpd-wallpaper
+sudo scp -r wombat-os/Backup linux/mnt/root/home/kipr
+sudo cp wombat-os/configFiles/config.txt linux/mnt/boot/config.txt
+sudo chmod 777 mnt/root/etc/modules
+sudo echo 'tsc2007' >> mnt/root/etc/modules
+```
+Note: Depending on your machine, you may want to up this to higher than j8 for this build (j8 - 8 is the core count you want to use for compiling)
+```bash
+KERNEL=kernel8
+sudo make -j8 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- Image modules dtbs
+sudo env PATH=$PATH make -j8 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- INSTALL_MOD_PATH=mnt/root modules_install
+sudo cp mnt/boot/$KERNEL.img mnt/boot/$KERNEL-backup.img
+sudo cp arch/arm64/boot/Image mnt/boot/$KERNEL.img
+sudo cp arch/arm64/boot/dts/broadcom/*.dtb mnt/boot/
+sudo cp arch/arm64/boot/dts/overlays/*.dtb* mnt/boot/overlays/
+sudo cp arch/arm/boot/dts/overlays/README mnt/boot/overlays/
+```
+Unmount boot and root then unplug micro SD card.
+```bash
+sudo umount mnt/boot
+sudo umount mnt/root
+```
+
 # Setup StpLib
 
 This is optional, but highly recommended, as it is a high level library for controlling the robot.
