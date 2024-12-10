@@ -28,6 +28,75 @@ python3 setup-image.py -m /media/tobias/bootfs
 
 This copies the files `config.txt` and `tsc2007-overlay.dts` to the boot partition.
 
+# Setup touch display (Dev Machine)
+
+Make sure to have your SD card plugged in to your host machine with a reader or other device.
+
+## Requirements
+```bash
+sudo apt install git bc bison flex libssl-dev make libc6-dev libncurses5-dev -y
+sudo apt install crossbuild-essential-arm64 -y
+```
+## Clone Repositories
+The Raspberry Pi Linux repository is fairly large and may take some time to download
+```bash
+git clone --depth=1 https://github.com/raspberrypi/linux
+git clone https://github.com/kipr/wombat-os
+```
+
+## Build Kernel
+```bash
+cd linux
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- bcm2711_defconfig
+```
+
+### Add Config Files
+```bash
+`sed -i 's/# CONFIG_TOUCHSCREEN_TSC2007 is not set/CONFIG_TOUCHSCREEN_TSC2007=m/' .config
+sudo cp wombat-os/configFiles/tsc2007-overlay.dts linux/arch/arm64/boot/dts/overlays/tsc2007-overlay.dts
+sudo cp wombat-os/configFiles/Makefile linux/arch/arm64/boot/dts/overlays/Makefile`
+```
+
+### Copy Files to Boot and Root
+Give permissions to mnt directory
+```bash
+sudo chmod 777 mnt
+```
+
+Make sure your mount directories are actually mmcblk0p1 and not something else
+```bash
+lsblk
+```
+```bash
+mkdir mnt && mkdir mnt/boot && mkdir mnt/root
+sudo mount /dev/mmcblk0p1 mnt/boot # Check if device actually corresponds to it
+sudo mount /dev/mmcblk0p2 mnt/root # Check if device actually corresponds to it
+```
+
+```bash
+sudo chmod 777 mnt/root/etc/modules
+sudo echo 'tsc2007' >> mnt/root/etc/modules
+```
+
+Note: Depending on your machine, you may want to up this to higher than j12 for this build (j12 - 12 is the core count you want to use for compiling)
+
+```bash
+cd linux
+KERNEL=kernel8
+sudo make -j12 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- Image modules dtbs
+sudo env PATH=$PATH make -j12 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- INSTALL_MOD_PATH=mnt/root modules_install
+sudo cp mnt/boot/$KERNEL.img mnt/boot/$KERNEL-backup.img
+sudo cp arch/arm64/boot/Image mnt/boot/$KERNEL.img
+sudo cp arch/arm64/boot/dts/broadcom/*.dtb mnt/boot/
+sudo cp arch/arm64/boot/dts/overlays/*.dtb* mnt/boot/overlays/
+sudo cp arch/arm/boot/dts/overlays/README mnt/boot/overlays/
+```
+Unmount boot and root then unplug micro SD card.
+```bash
+sudo umount mnt/boot
+sudo umount mnt/root
+```
+
 # Start
 
 Now you can start the pi and connect via ssh. The display should be fine now.
@@ -55,7 +124,7 @@ Copy the files from the assets folder to the correct location on the pi
 
 ```bash
 USER=pi
-HOST=192.168.0.14
+HOST=192.168.68.3
 scp -r assets/flashFiles $USER@$HOST:/home/$USER/flashFiles
 ```
 
@@ -69,7 +138,7 @@ cd ~/flashFiles
 sudo sh ./wallaby_flash
 ```
 
-> In some cases the gpio pins just don't work (Givig I/O or Write errors). Never found out what caused the issue,
+> In some cases the gpio pins just don't work (Giving I/O or Write errors). Never found out what caused the issue,
 > rebooting fixed it usually. Make sure you're on bullseye or another platform that supports the old way of writing to
 > gpio pins.
 
@@ -77,73 +146,6 @@ sudo sh ./wallaby_flash
 
 ```bash
 sudo apt-get install python3 python3-pip
-```
-
-# Setup touch display (Dev Machine)
-
-Make sure to have your SD card plugged in to your host machine with a reader or other device.
-
-### Requirements
-```bash
-sudo apt install git bc bison flex libssl-dev make libc6-dev libncurses5-dev -y
-sudo apt install crossbuild-essential-arm64 -y
-```
-### Clone Repositories
-The Raspberry Pi Linux repository is fairly large and may take some time to download
-```bash
-git clone --depth=1 https://github.com/raspberrypi/linux
-git clone https://github.com/kipr/wombat-os
-```
-
-### Build Kernel
-```bash
-cd linux
-make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- bcm2711_defconfig
-```
-
-### Add Config Files
-```bash
-sed -i 's/# CONFIG_TOUCHSCREEN_TSC2007 is not set/CONFIG_TOUCHSCREEN_TSC2007=m/' .config
-sudo cp wombat-os/configFiles/tsc2007-overlay.dts linux/arch/arm64/boot/dts/overlays/tsc2007-overlay.dts
-sudo cp wombat-os/configFiles/Makefile linux/arch/arm64/boot/dts/overlays/Makefile
-```
-
-### Copy Files to Boot and Root
-Give permissions to mnt directory
-```bash
-sudo chmod 777 mnt
-```
-
-Make sure your mount directories are actually sda and not something else
-```bash
-lsblk
-mkdir mnt && mkdir mnt/boot && mkdir mnt/root
-sudo mount /dev/sda1 mnt/boot
-sudo mount /dev/sda2 mnt/root
-```
-```bash
-sudo cp wombat-os/splash.png linux/mnt/root/usr/share/plymouth/themes/pix/splash.png
-sudo cp wombat-os/wombat.jpg linux/mnt/root/usr/share/rpd-wallpaper
-sudo scp -r wombat-os/Backup linux/mnt/root/home/kipr
-sudo cp wombat-os/configFiles/config.txt linux/mnt/boot/config.txt
-sudo chmod 777 mnt/root/etc/modules
-sudo echo 'tsc2007' >> mnt/root/etc/modules
-```
-Note: Depending on your machine, you may want to up this to higher than j8 for this build (j8 - 8 is the core count you want to use for compiling)
-```bash
-KERNEL=kernel8
-sudo make -j8 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- Image modules dtbs
-sudo env PATH=$PATH make -j8 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- INSTALL_MOD_PATH=mnt/root modules_install
-sudo cp mnt/boot/$KERNEL.img mnt/boot/$KERNEL-backup.img
-sudo cp arch/arm64/boot/Image mnt/boot/$KERNEL.img
-sudo cp arch/arm64/boot/dts/broadcom/*.dtb mnt/boot/
-sudo cp arch/arm64/boot/dts/overlays/*.dtb* mnt/boot/overlays/
-sudo cp arch/arm/boot/dts/overlays/README mnt/boot/overlays/
-```
-Unmount boot and root then unplug micro SD card.
-```bash
-sudo umount mnt/boot
-sudo umount mnt/root
 ```
 
 # Setup StpLib
@@ -271,7 +273,7 @@ On the pi, install the flutter pi binaries:
 These are the dependencies needed for building:
 
 ```bash
-sudo apt install cmake libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdrm-dev libgbm-dev ttf-mscorefonts-installer fontconfig libsystemd-dev libinput-dev libudev-dev  libxkbcommon-dev
+sudo apt install git cmake libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdrm-dev libgbm-dev ttf-mscorefonts-installer fontconfig libsystemd-dev libinput-dev libudev-dev  libxkbcommon-dev
 sudo fc-cache
 ```
 
@@ -303,6 +305,32 @@ Remove flutter-pi folder to save disk space:
  rm -rf ~/flutter-pi/
 ```
 
+### Update libinput to latest version
+
+```bash
+sudo apt install meson ninja-build libevdev-dev libwacom-dev libmtdev-dev libudev-dev libinput-dev libsystemd-dev libgtk-3-dev 
+```
+
+```bash
+wget https://gitlab.freedesktop.org/libinput/libinput/-/archive/1.27.0/libinput-1.27.0.tar.gz
+tar -xzf libinput-1.27.0.tar.gz
+cd libinput-1.27.0
+```
+
+```bash
+meson setup builddir
+ninja -C builddir
+sudo ninja -C builddir install
+```
+
+Check if it's the newest version:
+
+```bash
+libinput --version
+```
+
+Might need a reboot / new ssh session to take effect
+
 Create the service:
 
 ```bash
@@ -317,7 +345,7 @@ Description=Flutter UI with flutter-pi
 After=network.target
 
 [Service]
-ExecStart=flutter-pi --release /home/pi/my_apps_flutter_assets/
+ExecStart=flutter-pi --videomode 800x480 --release /home/pi/stp-velox/
 WorkingDirectory=/home/pi
 User=pi
 Group=pi
@@ -343,9 +371,9 @@ When everything works as expected, you should see the flutter pi UI on the displ
 # IN case ssh fails:
 
 ```bash
-tobias@tobias-G5-KC:~$ sudo ip link set dev wlp7s0 down
-tobias@tobias-G5-KC:~$ sudo ip link set dev wlp7s0 mtu 1400
-tobias@tobias-G5-KC:~$ sudo ip link set dev wlp7s0 up
+sudo ip link set dev wlp7s0 down
+sudo ip link set dev wlp7s0 mtu 1400
+sudo ip link set dev wlp7s0 up
 ```
 
 This seemed to fix ti sometimes
@@ -358,21 +386,21 @@ This seemed to fix ti sometimes
 
 ## Select any python interpreter (Ideally one that leaves the least changes on your system, as the interpreter will be discarded)
 
-![img.png](img_4.png)
+![img.png](./assets/img_4.png)
 
 ## Add SSH Interpreter
 
 This will require you to use ssh keys, else the password will be asked every time you run the script.
 
-![img.png](img_4.png)
+![img.png](./assets/img_4.png)
 
-![img_1.png](img_1.png)
+![img_1.png](./assets/img_1.png)
 
 ## Wait until indexing finishes
 
 ## Create test program
 
-![img_2.png](img_2.png)
+![img_2.png](./assets/img_2.png)
 
 This starts the program in torunament mode. Then it creates a wombat robot backend.
 The backend is the connection to the robot. It's the only thing you need to control the robot.
@@ -389,7 +417,7 @@ Start the program by clicking the run button - Like any other python program
 
 If everything worked, you'll see this:
 
-![img_3.png](img_3.png)
+![img_3.png](./assets/img_3.png)
 
 As you can see, the tournament mode block stops the communication with the robot. This is because the tournament mode
 disables the wifi interface and enables it again after the robot finished - It's a safety feature to prevent someone
@@ -397,3 +425,10 @@ gaining access to the robot while it's running.
 
 This should most likely be removed while testing, as it's not needed - It'll also block out many pro points of this
 approach - like running the debugger.
+
+
+# Cleanup the mess you made
+
+```bash 
+sudo apt-get remove --purge git
+```
