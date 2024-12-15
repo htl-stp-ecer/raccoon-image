@@ -33,24 +33,30 @@ This copies the files `config.txt` and `tsc2007-overlay.dts` to the boot partiti
 Make sure to have your SD card plugged in to your host machine with a reader or other device.
 
 ## Requirements
+
 ```bash
 sudo apt install git bc bison flex libssl-dev make libc6-dev libncurses5-dev -y
 sudo apt install crossbuild-essential-arm64 -y
 ```
+
 ## Clone Repositories
+
 The Raspberry Pi Linux repository is fairly large and may take some time to download
+
 ```bash
 git clone --depth=1 https://github.com/raspberrypi/linux
 git clone https://github.com/kipr/wombat-os
 ```
 
 ## Build Kernel
+
 ```bash
 cd linux
 make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- bcm2711_defconfig
 ```
 
 ### Add Config Files
+
 ```bash
 `sed -i 's/# CONFIG_TOUCHSCREEN_TSC2007 is not set/CONFIG_TOUCHSCREEN_TSC2007=m/' .config
 sudo cp wombat-os/configFiles/tsc2007-overlay.dts linux/arch/arm64/boot/dts/overlays/tsc2007-overlay.dts
@@ -58,15 +64,19 @@ sudo cp wombat-os/configFiles/Makefile linux/arch/arm64/boot/dts/overlays/Makefi
 ```
 
 ### Copy Files to Boot and Root
+
 Give permissions to mnt directory
+
 ```bash
 sudo chmod 777 mnt
 ```
 
 Make sure your mount directories are actually mmcblk0p1 and not something else
+
 ```bash
 lsblk
 ```
+
 ```bash
 mkdir mnt && mkdir mnt/boot && mkdir mnt/root
 sudo mount /dev/mmcblk0p1 mnt/boot # Check if device actually corresponds to it
@@ -78,7 +88,8 @@ sudo chmod 777 mnt/root/etc/modules
 sudo echo 'tsc2007' >> mnt/root/etc/modules
 ```
 
-Note: Depending on your machine, you may want to up this to higher than j12 for this build (j12 - 12 is the core count you want to use for compiling)
+Note: Depending on your machine, you may want to up this to higher than j12 for this build (j12 - 12 is the core count
+you want to use for compiling)
 
 ```bash
 cd linux
@@ -91,7 +102,9 @@ sudo cp arch/arm64/boot/dts/broadcom/*.dtb mnt/boot/
 sudo cp arch/arm64/boot/dts/overlays/*.dtb* mnt/boot/overlays/
 sudo cp arch/arm/boot/dts/overlays/README mnt/boot/overlays/
 ```
+
 Unmount boot and root then unplug micro SD card.
+
 ```bash
 sudo umount mnt/boot
 sudo umount mnt/root
@@ -277,11 +290,13 @@ sudo apt install git cmake libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev li
 sudo fc-cache
 ```
 
-Build flutter pi:
+Build flutter pi. To clone the repo, you must have access to the htl stp ecer github account. If you don't have access,
+you can still use the original project, but this will remove the ability to read sensor data. Add your ssh key to the
+account to clone the repo.:
 
 ```bash
 cd ~
-git clone --recursive https://github.com/ardera/flutter-pi
+git clone --recursive git@github.com:htl-stp-ecer/flutter-pi.git
 cd flutter-pi
 ```
 
@@ -425,7 +440,6 @@ gaining access to the robot while it's running.
 
 This should most likely be removed while testing, as it's not needed - It'll also block out many pro points of this
 approach - like running the debugger.
-
 
 # Cleanup the mess you made
 
