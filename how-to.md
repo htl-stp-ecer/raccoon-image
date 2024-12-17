@@ -242,6 +242,15 @@ _Building the app bundle:_
       scp -r ./build/flutter_assets/ pi@<ip>:/home/pi/my_apps_flutter_assets
       ```
 
+For the ui to fully work, you must enable the network manager service. This can be done by running:
+
+```bash
+sudo systemctl enable NetworkManager
+sudo systemctl start NetworkManager
+```
+
+Now, the wifi can be managed from the UI.
+
 ## Troubleshooting
 
 I had the issue of getting an `Artifact not found` error. It was caused by me using a too new flutter version - No pre
