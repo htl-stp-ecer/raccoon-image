@@ -92,15 +92,30 @@ Note: Depending on your machine, you may want to up this to higher than j12 for 
 you want to use for compiling)
 
 ```bash
+# Define mount point variables
+MNT_BOOT="/media/tobias/bootfs"
+MNT_ROOT="/media/tobias/rootfs"
+
 cd linux
 KERNEL=kernel8
+
+# Build kernel and modules
 sudo make -j12 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- Image modules dtbs
-sudo env PATH=$PATH make -j12 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- INSTALL_MOD_PATH=mnt/root modules_install
-sudo cp mnt/boot/$KERNEL.img mnt/boot/$KERNEL-backup.img
-sudo cp arch/arm64/boot/Image mnt/boot/$KERNEL.img
-sudo cp arch/arm64/boot/dts/broadcom/*.dtb mnt/boot/
-sudo cp arch/arm64/boot/dts/overlays/*.dtb* mnt/boot/overlays/
-sudo cp arch/arm/boot/dts/overlays/README mnt/boot/overlays/
+
+# Install modules
+sudo env PATH=$PATH make -j12 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- INSTALL_MOD_PATH=$MNT_ROOT modules_install
+
+# Backup existing kernel
+sudo cp $MNT_BOOT/$KERNEL.img $MNT_BOOT/$KERNEL-backup.img
+
+# Copy kernel image
+sudo cp arch/arm64/boot/Image $MNT_BOOT/$KERNEL.img
+
+# Copy device tree files
+sudo cp arch/arm64/boot/dts/broadcom/*.dtb $MNT_BOOT/
+sudo cp arch/arm64/boot/dts/overlays/*.dtb* $MNT_BOOT/overlays/
+sudo cp arch/arm/boot/dts/overlays/README $MNT_BOOT/overlays/
+
 ```
 
 Unmount boot and root then unplug micro SD card.
@@ -132,17 +147,6 @@ login shell accessible over serial? -> **NO**
 serial port hardware to be enabled? -> **YES**
 
 ## Flash Device
-
-Copy the files from the assets folder to the correct location on the pi
-
-```bash
-USER=pi
-HOST=192.168.68.3
-scp -r assets/flashFiles $USER@$HOST:/home/$USER/flashFiles
-```
-
-Before flashing, you have to modify the default flash script. Open the file `~/flashFiles/wallaby_flash` and edit the
-location of the variable pointing to the binfile. It should be `/home/pi/flashFiles/wombat.bin`.
 
 run:
 
