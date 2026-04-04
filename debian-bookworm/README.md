@@ -1,6 +1,6 @@
-# StpOS for debian Bookworm
+# RaccoonOS for debian Bookworm
 
-> This is a guide to install StpOS on a Raspberry Pi 3 B+ with a touch display.
+> This is a guide to install RaccoonOS on a Raspberry Pi 3 B+ with a touch display.
 > The commands are designed to work on Ubuntu 24.04 LTS.
 > This will most likely not work on windows, as windows cant access the sd cards root partition.
 > You will need docker installed and running to complete this
@@ -96,7 +96,7 @@ Now you can start the pi and connect via ssh. The display should be fine now.
 
 # On Device setup
 
-Now oyu have to configure the device's stm32.
+Now you have to configure the device's stm32.
 
 ## Install stm32flash
 
@@ -135,20 +135,11 @@ This will compile the latest version of the firmware and automatically flash it 
 sudo apt-get install python3 python3-pip
 ```
 
-#### DEPRECATED
-
-The following steps are deprecated and will soon be obsolete. The kipr library will soon not be used anymore:
-
-### Install libwallaby
-
-Steps not listed, as soon obsolte.
-
-
 # Set up the UI
 
 ## Building the UI and deploying it to the pi
 
-Clone the ui from the stp github organistion.
+Clone the botui from the stp github organisation.
 
 The app must be built on your development machine. Note that you can't use a Raspberry Pi as your development machine.
 
@@ -168,7 +159,7 @@ The app must be built on your development machine. Note that you can't use a Ras
 I had the issue of getting an `Artifact not found` error. It was caused by me using a too new flutter version - No pre
 build engine was found.
 
-Fixed it by switching ti `3.24.4` (At this time, 3.24.5 was the latest version) because 3.24.4 had a engine prebuild
+Fixed it by switching to `3.24.4` (At this time, 3.24.5 was the latest version) because 3.24.4 had a engine prebuild.
 Engine version can be found here: https://github.com/ardera/flutter-engine-binaries-for-arm
 
 ## Setting up flutter pi on the raspberry itself
@@ -211,13 +202,11 @@ sudo apt install git cmake libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev li
 sudo fc-cache
 ```
 
-Build flutter pi. To clone the repo, you must have access to the htl stp ecer github account. If you don't have access,
-you can still use the original project, but this will remove the ability to read sensor data. Add your ssh key to the
-account to clone the repo.:
+Clone and build flutter-pi:
 
 ```bash
 cd ~
-git clone --recursive git@github.com:htl-stp-ecer/flutter-pi.git
+git clone https://github.com/ardera/flutter-pi.git
 cd flutter-pi
 ```
 
@@ -238,7 +227,7 @@ sudo make install
 Remove flutter-pi folder to save disk space:
 
 ```bash
- rm -rf ~/flutter-pi/
+rm -rf ~/flutter-pi/
 ```
 
 ### Update libinput to latest version
@@ -281,7 +270,7 @@ Description=Flutter UI with flutter-pi
 After=network.target
 
 [Service]
-ExecStart=flutter-pi --videomode 800x480 --release /home/pi/stp-velox/
+ExecStart=flutter-pi --videomode 800x480 --release /home/pi/botui/
 WorkingDirectory=/home/pi
 User=pi
 Group=pi
@@ -302,15 +291,15 @@ sudo systemctl enable flutter-ui.service
 sudo systemctl start flutter-ui.service
 ```
 
-### Uploading StpVelox
+### Uploading botui
 
-CLone the stp velox repo to your local dev machine:
+Clone the botui repo to your local dev machine:
 
 ```bash
-git clone git@github.com:htl-stp-ecer/StpVelox.git
+git clone git@github.com:htl-stp-ecer/botui.git
 ```
 
-In the repo, modify the `deploy.sh` and run it, to upload it to the pi. 
+In the repo, modify the `deploy.sh` and run it to upload it to the pi.
 
 ### Enabling the ui network manager
 

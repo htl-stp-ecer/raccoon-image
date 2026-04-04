@@ -165,7 +165,7 @@ sudo sh ./wallaby_flash
 sudo apt-get install python3 python3-pip
 ```
 
-# Setup StpLib
+# Setup Robot Library
 
 This is optional, but highly recommended, as it is a high level library for controlling the robot.
 This includes the kipr library, which is slightly lower level library for controlling the robot.
@@ -173,12 +173,12 @@ This includes the kipr library, which is slightly lower level library for contro
 ## Clone the repository
 
 ```bash
-git clone git@github.com:htl-stp-ecer/StpLib.git --recurse-submodules
+git clone git@github.com:htl-stp-ecer/RaccoonLib.git --recurse-submodules
 ```
 
 Make sure to disable the camera module, as this is currently not supported by the library.
 
-It's located in `StpLib/native-library/external/libwallaby/module/CMakeLists.txt`. Sroll a little bit down and remove
+It's located in `RaccoonLib/native-library/external/libwallaby/module/CMakeLists.txt`. Scroll a little bit down and remove
 the link to the camera module.
 
 ## Build the library
@@ -186,16 +186,16 @@ the link to the camera module.
 The library comes with many scripts making building and deploying the library easy. To build the library with the kipr
 library, you first must modify the script to build the library too.
 
-This can be done by opening the file `StpLibs/native-library/scripts/compile-container.sh` and setting the value
+This can be done by opening the file `RaccoonLib/native-library/scripts/compile-container.sh` and setting the value
 BUILD_LIBWALLABY to true.
 
-Modify the `StpLibs/native-library/scripts/install-wheel.sh` file to your user and host. The other settings can be left
+Modify the `RaccoonLib/native-library/scripts/install-wheel.sh` file to your user and host. The other settings can be left
 like they were.
 
 Once that's done, run this to build and deploy:
 
 ```bash
-cd StpLib/native-library
+cd RaccoonLib/native-library
 bash ./scripts/compile-container.sh
 ```
 
@@ -207,7 +207,7 @@ yourself. To do this, run:
 ```bash
 cd scripts
 docker buildx create --use
-docker buildx build --platform linux/arm64 -t libstp-builder:python3.9 --load ..
+docker buildx build --platform linux/arm64 -t raccoonlib-builder:python3.9 --load ..
 ```
 
 This should hopefully create the image for further usage
