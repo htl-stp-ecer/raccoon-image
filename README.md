@@ -26,3 +26,8 @@ instructions and files for the original wombat image.
 # Author
 
 Tobias Madlberger - Creator of RaccoonOS
+
+## License
+
+Copyright (C) 2026 Tobias Madlberger  
+Licensed under the GNU General Public License v3.0 — see [COPYING](COPYING) for details.
