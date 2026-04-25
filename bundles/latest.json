@@ -1,0 +1,10 @@
+{
+  "bundle": "latest",
+  "components": {
+    "raccoon-lib": "v1.0.159",
+    "raccoon-cli": "v0.1.103",
+    "stm32-data-reader": "v1.0.47",
+    "raccoon-cam": "",
+    "botui": "v1.0.49"
+  }
+}
