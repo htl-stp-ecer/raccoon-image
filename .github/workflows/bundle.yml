@@ -1,0 +1,76 @@
+name: Bundle Release
+
+on:
+  repository_dispatch:
+    types: [component-released]
+  workflow_dispatch:
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Get latest component versions
+        id: versions
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          LIB=$(gh release view --repo htl-stp-ecer/raccoon-lib --json tagName -q .tagName 2>/dev/null || echo "")
+          CLI=$(gh release view --repo htl-stp-ecer/raccoon-cli --json tagName -q .tagName 2>/dev/null || echo "")
+          STM32=$(gh release view --repo htl-stp-ecer/stm32-data-reader --json tagName -q .tagName 2>/dev/null || echo "")
+          CAM=$(gh release view --repo htl-stp-ecer/raccoon-cam --json tagName -q .tagName 2>/dev/null || echo "")
+          BOTUI=$(gh release view --repo htl-stp-ecer/botui --json tagName -q .tagName 2>/dev/null || echo "")
+          echo "lib=$LIB" >> $GITHUB_OUTPUT
+          echo "cli=$CLI" >> $GITHUB_OUTPUT
+          echo "stm32=$STM32" >> $GITHUB_OUTPUT
+          echo "cam=$CAM" >> $GITHUB_OUTPUT
+          echo "botui=$BOTUI" >> $GITHUB_OUTPUT
+
+      - name: Generate bundle version
+        id: bundle
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          DATE=$(date +%Y.%-m.%-d)
+          N=$(gh release list --repo htl-stp-ecer/raccoon-image --limit 100 --json tagName -q '.[].tagName' 2>/dev/null | grep -c "^${DATE}\." || echo 0)
+          echo "version=${DATE}.$((N+1))" >> $GITHUB_OUTPUT
+
+      - name: Generate manifest.json
+        run: |
+          python3 -c "
+          import json, sys
+          manifest = {
+              'bundle': '${{ steps.bundle.outputs.version }}',
+              'components': {
+                  'raccoon-lib':        '${{ steps.versions.outputs.lib }}',
+                  'raccoon-cli':        '${{ steps.versions.outputs.cli }}',
+                  'stm32-data-reader':  '${{ steps.versions.outputs.stm32 }}',
+                  'raccoon-cam':        '${{ steps.versions.outputs.cam }}',
+                  'botui':              '${{ steps.versions.outputs.botui }}',
+              }
+          }
+          print(json.dumps(manifest, indent=2))
+          " > manifest.json
+          cat manifest.json
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          gh release create "${{ steps.bundle.outputs.version }}" \
+            --repo htl-stp-ecer/raccoon-image \
+            --title "raccoon-image ${{ steps.bundle.outputs.version }}" \
+            --notes "$(cat <<'EOF'
+          **Components:**
+          - raccoon-lib: ${{ steps.versions.outputs.lib }}
+          - raccoon-cli: ${{ steps.versions.outputs.cli }}
+          - stm32-data-reader: ${{ steps.versions.outputs.stm32 }}
+          - raccoon-cam: ${{ steps.versions.outputs.cam }}
+          - botui: ${{ steps.versions.outputs.botui }}
+
+          Install with: `raccoon update`
+          EOF
+          )" \
+            manifest.json
