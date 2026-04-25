@@ -1,4 +1,4 @@
-name: Bundle Release
+name: Update dev manifest
 
 on:
   repository_dispatch:
@@ -6,12 +6,17 @@ on:
   workflow_dispatch:
 
 jobs:
-  bundle:
+  update-dev:
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+
       - name: Get latest component versions
         id: versions
         env:
@@ -28,49 +33,30 @@ jobs:
           echo "cam=$CAM" >> $GITHUB_OUTPUT
           echo "botui=$BOTUI" >> $GITHUB_OUTPUT
 
-      - name: Generate bundle version
-        id: bundle
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+      - name: Write bundles/dev.json
         run: |
-          DATE=$(date +%Y.%-m.%-d)
-          N=$(gh release list --repo htl-stp-ecer/raccoon-image --limit 100 --json tagName -q '.[].tagName' 2>/dev/null | grep -c "^${DATE}\." || echo 0)
-          echo "version=${DATE}.$((N+1))" >> $GITHUB_OUTPUT
-
-      - name: Generate manifest.json
-        run: |
+          mkdir -p bundles
           python3 -c "
-          import json, sys
+          import json
           manifest = {
-              'bundle': '${{ steps.bundle.outputs.version }}',
+              'bundle': 'dev',
               'components': {
-                  'raccoon-lib':        '${{ steps.versions.outputs.lib }}',
-                  'raccoon-cli':        '${{ steps.versions.outputs.cli }}',
-                  'stm32-data-reader':  '${{ steps.versions.outputs.stm32 }}',
-                  'raccoon-cam':        '${{ steps.versions.outputs.cam }}',
-                  'botui':              '${{ steps.versions.outputs.botui }}',
+                  'raccoon-lib':       '${{ steps.versions.outputs.lib }}',
+                  'raccoon-cli':       '${{ steps.versions.outputs.cli }}',
+                  'stm32-data-reader': '${{ steps.versions.outputs.stm32 }}',
+                  'raccoon-cam':       '${{ steps.versions.outputs.cam }}',
+                  'botui':             '${{ steps.versions.outputs.botui }}',
               }
           }
           print(json.dumps(manifest, indent=2))
-          " > manifest.json
-          cat manifest.json
+          " > bundles/dev.json
+          cat bundles/dev.json
 
-      - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+      - name: Commit and push
         run: |
-          gh release create "${{ steps.bundle.outputs.version }}" \
-            --repo htl-stp-ecer/raccoon-image \
-            --title "raccoon-image ${{ steps.bundle.outputs.version }}" \
-            --notes "$(cat <<'EOF'
-          **Components:**
-          - raccoon-lib: ${{ steps.versions.outputs.lib }}
-          - raccoon-cli: ${{ steps.versions.outputs.cli }}
-          - stm32-data-reader: ${{ steps.versions.outputs.stm32 }}
-          - raccoon-cam: ${{ steps.versions.outputs.cam }}
-          - botui: ${{ steps.versions.outputs.botui }}
-
-          Install with: `raccoon update`
-          EOF
-          )" \
-            manifest.json
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add bundles/dev.json
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "chore: update dev manifest [skip ci]"
+          git push
