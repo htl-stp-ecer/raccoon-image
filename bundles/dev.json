@@ -2,9 +2,9 @@
   "bundle": "dev",
   "components": {
     "raccoon-lib": "v1.0.139",
-    "raccoon-cli": "v0.1.164",
+    "raccoon-cli": "v0.1.165",
     "stm32-data-reader": "v1.0.57",
     "raccoon-cam": "",
-    "botui": "v1.0.67"
+    "botui": "v1.0.68"
   }
 }
