@@ -1,0 +1,110 @@
+name: Build updated image
+
+on:
+  schedule:
+    - cron: '23 4 1 * *'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish a release (disable for a build-only test)
+        type: boolean
+        default: false
+  push:
+    paths:
+      - '.github/workflows/image.yml'
+      - 'scripts/**'
+      - 'tests/**'
+  pull_request:
+    paths:
+      - '.github/workflows/image.yml'
+      - 'scripts/**'
+      - 'tests/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: image-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check scripts
+        run: |
+          bash -n scripts/build-image.sh scripts/update-image-root.sh
+          shellcheck scripts/*.sh
+          python3 -m unittest discover -s tests -v
+
+  build:
+    needs: validate
+    if: github.event_name != 'push'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install image tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y e2fsprogs fdisk parted xz-utils
+      - name: Download and verify release inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/download-image-inputs.py "$RUNNER_TEMP/inputs"
+      - name: Build image
+        run: |
+          mkdir -p "$RUNNER_TEMP/output"
+          sudo bash scripts/build-image.sh "$RUNNER_TEMP/inputs" "$RUNNER_TEMP/output"
+          sudo chown -R "$(id -u):$(id -g)" "$RUNNER_TEMP/output"
+          # GitHub release assets must be smaller than 2 GiB.
+          test "$(stat -c %s "$RUNNER_TEMP/output/raccoon-os.img.xz")" -lt 2147483648
+      - uses: actions/upload-artifact@v4
+        with:
+          name: raccoon-image
+          path: ${{ runner.temp }}/output/*
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: >-
+      github.repository == 'htl-stp-ecer/raccoon-image' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'schedule' ||
+       (github.event_name == 'workflow_dispatch' && inputs.publish))
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: raccoon-image
+          path: output
+      - name: Publish monthly image
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BUILD_SHA: ${{ github.sha }}
+        run: |
+          tag="image-$(date -u +%Y-%m-%d)-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          cat > notes.md <<'NOTES'
+          Automated refresh of the Trixie RaccoonOS seed image with current OS packages
+          and the latest released Raccoon components. See manifest.json for input
+          versions and hashes, and the package inventories for installed dependencies.
+
+          Flash raccoon-os.img.xz to an SD card with Raspberry Pi Imager (Use custom).
+          Verify the download with SHA256SUMS. Wired networking uses DHCP; configure
+          Wi-Fi after boot. The seed image's user/password are retained.
+
+          STM32 firmware is staged in /home/pi/flashFiles; flash it on the physical bot
+          using the supplied flash_wombat.sh if a firmware update is needed. CI cannot
+          validate the display, Ethernet hardware, or coprocessor on a real bot.
+          NOTES
+          # Create a draft first so users never see a partially uploaded release.
+          gh release create "$tag" --target "$BUILD_SHA" --draft --latest=false \
+            --title "RaccoonOS monthly image $(date -u +%Y-%m-%d)" \
+            --notes-file notes.md output/*
+          gh release edit "$tag" --draft=false --latest=false
