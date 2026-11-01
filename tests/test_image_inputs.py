@@ -42,6 +42,29 @@ class ReleaseInputsTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     inputs.download("org/repo", None, "*.whl", dest)
 
+    def test_reads_base_checksum_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "base.sha256"
+            path.write_text("a" * 64 + "  raccoon-os-base.img.xz\n")
+            self.assertEqual(inputs.read_base_checksum(path), ("a" * 64, "raccoon-os-base.img.xz"))
+            path.write_text("short  file\n")
+            with self.assertRaises(ValueError):
+                inputs.read_base_checksum(path)
+
+    def test_repository_checksum_file_is_valid(self):
+        sha256, asset = inputs.read_base_checksum()
+        self.assertTrue(asset.endswith(".img.xz"))
+
+    def test_library_and_sim_patterns_pick_one_wheel_each(self):
+        names = ["raccoon_library-154-py3-none-any.whl",
+                 "raccoon_sim-154-cp313-cp313-macosx_14_0_universal2.whl",
+                 "raccoon_sim-154-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl",
+                 "raccoon_sim-154-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+                 "raccoon_sim-154-cp313-cp313-win_amd64.whl"]
+        release = {"assets": [self.asset(n) for n in names]}
+        for _, _, pattern, _ in inputs.COMPONENTS[:2]:
+            inputs.select_asset(release, pattern)
+
 
 if __name__ == "__main__":
     unittest.main()

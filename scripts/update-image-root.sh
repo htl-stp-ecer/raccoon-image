@@ -94,7 +94,8 @@ apt-get clean
 rm -rf /var/lib/apt/lists/* /root/.cache /home/pi/.cache
 # Remove machine identity and captured credentials from the public seed.
 rm -f /etc/ssh/ssh_host_* /var/lib/systemd/random-seed /var/lib/dbus/machine-id
-truncate -s 0 /etc/machine-id
+# `uninitialized` (not an empty file) makes systemd treat the next boot as the first boot.
+printf 'uninitialized\n' > /etc/machine-id
 ln -s /etc/machine-id /var/lib/dbus/machine-id
 rm -rf /root/.ssh /home/pi/.ssh
 rm -f /root/.*history /home/pi/.*history
