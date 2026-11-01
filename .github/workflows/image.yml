@@ -2,7 +2,7 @@ name: Build updated image
 
 on:
   schedule:
-    - cron: '23 4 1 * *'
+    - cron: '0 0 1 * *'
   workflow_dispatch:
     inputs:
       publish:
@@ -38,9 +38,27 @@ jobs:
           shellcheck scripts/*.sh
           python3 -m unittest discover -s tests -v
 
-  build:
+  # The monthly run only builds when an input (base image or a component release)
+  # differs from the last published image. A manual run always builds.
+  check:
     needs: validate
     if: github.event_name != 'push'
+    runs-on: ubuntu-24.04
+    outputs:
+      changed: ${{ steps.compare.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare inputs with the last published image
+        id: compare
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/image-inputs-changed.py
+
+  build:
+    needs: [validate, check]
+    if: >-
+      github.event_name != 'push' &&
+      (github.event_name != 'schedule' || needs.check.outputs.changed == 'true')
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 180
     steps:
@@ -91,20 +109,21 @@ jobs:
         run: |
           tag="image-$(date -u +%Y-%m-%d)-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           cat > notes.md <<'NOTES'
-          Automated refresh of the Trixie RaccoonOS seed image with current OS packages
+          Automated refresh of the Trixie RaccoonOS base image with current OS packages
           and the latest released Raccoon components. See manifest.json for input
           versions and hashes, and the package inventories for installed dependencies.
 
           Flash raccoon-os.img.xz to an SD card with Raspberry Pi Imager (Use custom).
           Verify the download with SHA256SUMS. Wired networking uses DHCP; configure
-          Wi-Fi after boot. The seed image's user/password are retained.
+          Wi-Fi after boot. The base image's user/password are retained; SSH host keys are
+          created on the first boot.
 
           STM32 firmware is staged in /home/pi/flashFiles; flash it on the physical bot
           using the supplied flash_wombat.sh if a firmware update is needed. CI cannot
           validate the display, Ethernet hardware, or coprocessor on a real bot.
           NOTES
           # Create a draft first so users never see a partially uploaded release.
-          gh release create "$tag" --target "$BUILD_SHA" --draft --latest=false \
+          gh release create "$tag" --target "$BUILD_SHA" --draft \
             --title "RaccoonOS monthly image $(date -u +%Y-%m-%d)" \
             --notes-file notes.md output/*
-          gh release edit "$tag" --draft=false --latest=false
+          gh release edit "$tag" --draft=false --latest
