@@ -4,15 +4,11 @@ This repo helps you understand how you can modify a base raspberry pi image into
 
 # Getting started
 
-There are multiple base versions available here. Right now, these do exist:
+The only supported base is Debian Trixie (see `debian-trixie/`). Older Debian versions (Bookworm, Bullseye)
+were removed because there is no base image for them anymore; they are still in the git history.
 
-- Debian Trixie (latest, recommended)
-- Debian Bookworm
-- Debian Bullseye (deprecated)
-
-The latest and therefore recommended version is the Debian Trixie version.
-The Bookworm version is still supported but will not receive new features.
-The Bullseye version is deprecated and will not be updated anymore.
+The base image the automated build starts from is described in
+[debian-trixie/base-image](debian-trixie/base-image/README.md).
 
 # Disclaimers
 
@@ -34,26 +30,36 @@ Licensed under the GNU General Public License v3.0 — see [COPYING](COPYING) fo
 
 # Automated images
 
-The **Build updated image** GitHub Action refreshes the Trixie image on the first
-of every month at 04:23 UTC. Download `raccoon-os.img.xz` and `SHA256SUMS` from the
+The **Build updated image** GitHub Action runs on the first of every month at 00:00 UTC
+and publishes a new image only if the base image or the release of `raccoon-lib`,
+`raccoon-cli`, `stm32-data-reader` or `botui` differs from the last published image
+(`scripts/image-inputs-changed.py` compares them with that release's `manifest.json`);
+otherwise the run ends without building. Changes to Debian packages alone do not trigger
+a new image. A manual run always builds. Download `raccoon-os.img.xz` and `SHA256SUMS` from the
 [image releases](https://github.com/htl-stp-ecer/raccoon-image/releases), verify the
 checksum, then select **Use custom** in Raspberry Pi Imager to flash the compressed
-image. These are SD-card disk images (`.img.xz`), rather than bootable PC ISOs.
-Automated releases do not replace the maintainer-selected **Latest** release.
+image.
 
-The build starts from the SHA-256-pinned `v2.0.0` image, preserving the Pi kernel
-configuration, touchscreen support, flutter-pi, and other device setup. It upgrades
-OS packages and installs the latest published `raccoon-lib`, `raccoon-cli`,
-`stm32-data-reader`, and `botui` releases. It resolves component versions once per
-build and verifies GitHub's asset digests. Missing or ambiguous assets fail the
-build. `manifest.json`, `packages.txt`, and `python-packages.txt` record the inputs
-and installed dependencies; the image also contains these in `/etc/raccoon-image`.
+Every build starts from the **base image** described in
+[debian-trixie/base-image](debian-trixie/base-image/README.md), never from an earlier
+monthly build. The base image is not stored in git (about 1 GB); its SHA-256 is, and
+`scripts/download-image-inputs.py` downloads it from the matching release and refuses
+anything else. [HOW-IT-WAS-BUILT.md](debian-trixie/base-image/HOW-IT-WAS-BUILT.md)
+documents exactly how it was made.
+
+On top of the base image the build upgrades the OS packages and installs the latest
+released `raccoon-lib` (`raccoon_library` and `raccoon_sim`), `raccoon-cli`,
+`stm32-data-reader` and `botui`. It resolves the component versions once per build and
+verifies GitHub's asset digests. Missing or ambiguous assets fail the build.
+`manifest.json`, `packages.txt` and `python-packages.txt` record the inputs and the
+installed dependencies; the image also contains them in `/etc/raccoon-image`.
+Newly released component combinations are not guaranteed to have been tested together.
 The mutable `bundles/dev.json` is not required.
 
 Wired networking uses DHCP. Saved network profiles are removed, so configure Wi-Fi
-after boot. The seed's `pi` account/password are retained; SSH host keys and machine
-identity are regenerated. The upstream server setup runs once on first boot, which also expands the root
-partition and reboots once to use the full SD card.
+after boot. SSH host keys and the machine identity are created on the first boot. The
+upstream server setup runs once on first boot, which also expands the root partition and
+reboots once to use the full SD card.
 Matching STM32 firmware is included in `/home/pi/flashFiles`, but CI cannot flash
 the physical coprocessor. When needed, run `sudo bash flash_wombat.sh` from that
 directory on the bot. Hardware boot, touchscreen, Ethernet, and firmware testing
@@ -68,12 +74,8 @@ release is made public. No personal access token or physical runner is required.
 Pull requests touching the build run validation and an ARM64 image build without
 release permissions (external contributions may require GitHub's workflow approval).
 
-To change the hardware-tested seed, update `BASE_TAG`, `BASE_ASSET`, and
-`BASE_SHA256` in `scripts/download-image-inputs.py` together. The seed must be a
-64-bit Trixie image with the Raspberry Pi OS boot partition followed by an ext4
-root partition and the existing `pi` user/device setup. Each refresh starts from
-that seed, not a previous monthly build. Newly released component combinations
-are not guaranteed to have been tested together.
+To change the base image, follow "Replacing the base image" in
+[debian-trixie/base-image/README.md](debian-trixie/base-image/README.md).
 
 To build locally on an ARM64 Linux machine with root/loop-device access, install
 `gh`, Python 3.9+, `e2fsprogs`, `fdisk`, `parted`, and `xz-utils`, then run:
@@ -84,6 +86,6 @@ mkdir -p /tmp/raccoon-output
 sudo bash scripts/build-image.sh /tmp/raccoon-inputs /tmp/raccoon-output
 ```
 
-Allow enough disk space for the decompressed seed, 2 GiB of update headroom, and
-the compressed output. The build shrinks the final image with 512 MiB of free
-filesystem space. GitHub-hosted `ubuntu-24.04-arm` runners build natively.
+Allow enough disk space for the decompressed base image (about 5 GB), 2 GiB of update
+headroom, and the compressed output. The build shrinks the final image with 512 MiB of
+free filesystem space. GitHub-hosted `ubuntu-24.04-arm` runners build natively.
