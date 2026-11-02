@@ -65,6 +65,22 @@ class ReleaseInputsTest(unittest.TestCase):
         for _, _, pattern, _ in inputs.COMPONENTS[:2]:
             inputs.select_asset(release, pattern)
 
+    def test_reads_bundle_through_latest_pointer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            tags = {"raccoon-lib": "v1", "raccoon-cli": "v2", "stm32-data-reader": "v3",
+                    "raccoon-cam": "", "botui": "v4"}
+            (path / "latest.json").write_text(json.dumps({"ref": "b1"}))
+            (path / "b1.json").write_text(json.dumps({"bundle": "b1", "components": tags}))
+            self.assertEqual(inputs.read_bundle(None, path), ("b1", tags))
+            self.assertEqual(inputs.read_bundle("b1", path), ("b1", tags))
+            tags["botui"] = ""
+            (path / "b1.json").write_text(json.dumps({"bundle": "b1", "components": tags}))
+            with self.assertRaises(ValueError):
+                inputs.read_bundle("b1", path)
+            with self.assertRaises(ValueError):
+                inputs.read_bundle("../b1", path)
+
 
 if __name__ == "__main__":
     unittest.main()
