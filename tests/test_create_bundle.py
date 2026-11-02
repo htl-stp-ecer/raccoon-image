@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 import subprocess
@@ -159,6 +160,16 @@ class GateTests(unittest.TestCase):
 
 
 class MainTests(unittest.TestCase):
+    def setUp(self):
+        # On GitHub Actions these point at the real job summary and step output. main() writes
+        # to them, so a test must never see them (the tests below would otherwise put
+        # "Bundle 2026.11.02-2 ... v1" and "Bundle not created" into the summary of the real run).
+        patcher = patch.dict(os.environ)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        os.environ.pop("GITHUB_STEP_SUMMARY", None)
+        os.environ.pop("GITHUB_OUTPUT", None)
+
     def test_main_writes_files_only_after_the_gate_passes(self):
         with tempfile.TemporaryDirectory() as tmp:
             bundles = Path(tmp)
@@ -183,3 +194,23 @@ class MainTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NoWritesToTheRunnerTests(unittest.TestCase):
+    """Running the whole suite on a runner must leave the job summary and outputs alone."""
+
+    def test_suite_does_not_touch_summary_or_output(self):
+        import subprocess
+        import sys
+        import tempfile
+
+        root = Path(__file__).parents[1]
+        with tempfile.TemporaryDirectory() as tmp:
+            summary, output = Path(tmp, "summary.md"), Path(tmp, "output.txt")
+            env = {**os.environ, "GITHUB_STEP_SUMMARY": str(summary), "GITHUB_OUTPUT": str(output)}
+            result = subprocess.run(
+                [sys.executable, "-m", "unittest", "tests.test_create_bundle.MainTests", "tests.test_create_bundle.GateTests"],
+                cwd=root, env=env, capture_output=True, text=True)
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertFalse(summary.exists() and summary.read_text(), "the tests wrote to the job summary")
+            self.assertFalse(output.exists() and output.read_text(), "the tests wrote to the step output")
