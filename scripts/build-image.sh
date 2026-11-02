@@ -52,6 +52,10 @@ mkdir -p "$root/tmp/image-inputs"
 for component in raccoon-lib raccoon-cli stm32-data-reader botui manifest.json; do
     cp -a "$inputs/$component" "$root/tmp/image-inputs/"
 done
+# Only bundles with a transport contract have a device bundle file.
+if [[ -f "$inputs/raccoon-bundle.json" ]]; then
+    cp -a "$inputs/raccoon-bundle.json" "$root/tmp/image-inputs/"
+fi
 cp "$script_dir/update-image-root.sh" "$root/tmp/update-image-root.sh"
 chroot "$root" /bin/bash /tmp/update-image-root.sh
 cp "$root/etc/raccoon-image/"*.txt "$output/"
