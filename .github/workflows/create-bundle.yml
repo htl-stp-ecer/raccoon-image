@@ -1,0 +1,147 @@
+name: Create Bundle
+
+# Makes a numbered bundle from component releases, points bundles/latest.json at
+# it, optionally builds the image and updates the pins in raccoon-example.
+# Started by hand only. This is the only workflow that publishes bundles and
+# the only one that moves the pins in raccoon-example.
+#
+# The transport contract gate always runs before anything is committed and
+# cannot be switched off: every artifact with compiled transport code must carry
+# the contract hash of the transport release the bundle names.
+
+on:
+  workflow_dispatch:
+    inputs:
+      raccoon_cli:
+        description: raccoon-cli release tag, e.g. v173 (empty = newest release)
+        type: string
+        default: ''
+      raccoon_lib:
+        description: raccoon-lib release tag, e.g. v155 (empty = newest release)
+        type: string
+        default: ''
+      raccoon_transport:
+        description: raccoon-transport release tag, e.g. v69 (empty = newest release). The gate checks against this one.
+        type: string
+        default: ''
+      botui:
+        description: botui release tag, e.g. v73 (empty = newest release)
+        type: string
+        default: ''
+      stm32_data_reader:
+        description: stm32-data-reader release tag, e.g. v58 (empty = newest release)
+        type: string
+        default: ''
+      build_image:
+        description: Build the image from the new bundle
+        type: boolean
+        default: true
+      publish:
+        description: Publish (off = dry run - everything is checked, nothing is committed, released or dispatched)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# Two runs must never compute the same bundle name or push at the same time.
+concurrency:
+  group: create-bundle
+  cancel-in-progress: false
+
+jobs:
+  create:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      # Everything below that writes to a repository or starts a workflow uses the
+      # Raccoon OS Bot, never a personal token.
+      - name: Create an app token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+          owner: htl-stp-ecer
+          repositories: raccoon-image,raccoon-example
+          permission-contents: write
+          permission-actions: write
+
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Check scripts
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Resolve versions, check releases, run the contract gate, write the bundle
+        id: bundle
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          IN_CLI: ${{ inputs.raccoon_cli }}
+          IN_LIB: ${{ inputs.raccoon_lib }}
+          IN_TRANSPORT: ${{ inputs.raccoon_transport }}
+          IN_BOTUI: ${{ inputs.botui }}
+          IN_STM32: ${{ inputs.stm32_data_reader }}
+        run: |
+          python3 scripts/create_bundle.py \
+            --raccoon-cli "$IN_CLI" \
+            --raccoon-lib "$IN_LIB" \
+            --raccoon-transport "$IN_TRANSPORT" \
+            --botui "$IN_BOTUI" \
+            --stm32-data-reader "$IN_STM32"
+
+      - name: Dry run
+        if: ${{ !inputs.publish }}
+        run: |
+          {
+            echo "### Dry run"
+            echo "Bundle \`${{ steps.bundle.outputs.name }}\` passed every check. Nothing was committed, released or dispatched."
+            if [ "${{ inputs.build_image }}" = "true" ]; then
+              echo "No image was built either: the image workflow reads the bundle from main, where it does not exist in a dry run."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit and push the bundle
+        id: push
+        if: ${{ inputs.publish }}
+        run: |
+          git config user.name  "raccoon-os-bot[bot]"
+          git config user.email "raccoon-os-bot[bot]@users.noreply.github.com"
+          git add bundles/
+          git commit -m "chore: bundle ${{ steps.bundle.outputs.name }}"
+          git push origin HEAD:main
+
+      # A push with the workflow token does not start other workflows; an API
+      # dispatch with the app token does. The dispatch comes after the push so the
+      # image run sees the new manifest.
+      - name: Start the image build
+        id: image
+        if: ${{ inputs.publish && inputs.build_image }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          gh workflow run image.yml --repo "$GITHUB_REPOSITORY" --ref main \
+            -f bundle="${{ steps.bundle.outputs.name }}" -f publish=true
+
+      - name: Update the pins in raccoon-example
+        id: example
+        if: ${{ always() && steps.push.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/htl-stp-ecer/raccoon-example/dispatches \
+            -d '{"event_type":"bundle-released","client_payload":{"bundle":"${{ steps.bundle.outputs.name }}","cli":"${{ steps.bundle.outputs.cli }}","lib":"${{ steps.bundle.outputs.lib }}"}}'
+
+      # The bundle stays when the image dispatch fails; the image can be built
+      # later with image.yml and the bundle name. The run still turns red.
+      - name: Report a failed image dispatch
+        if: ${{ always() && steps.image.outcome == 'failure' }}
+        run: |
+          echo "::error::The bundle ${{ steps.bundle.outputs.name }} was committed, but starting image.yml failed. Run 'Build updated image' by hand with bundle=${{ steps.bundle.outputs.name }}."
+          exit 1
