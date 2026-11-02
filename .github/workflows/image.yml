@@ -1,24 +1,16 @@
 name: Build updated image
 
 on:
-  schedule:
-    - cron: '0 0 1 * *'
   workflow_dispatch:
     inputs:
       publish:
         description: Publish a release (disable for a build-only test)
         type: boolean
         default: false
-  push:
-    paths:
-      - '.github/workflows/image.yml'
-      - 'scripts/**'
-      - 'tests/**'
-  pull_request:
-    paths:
-      - '.github/workflows/image.yml'
-      - 'scripts/**'
-      - 'tests/**'
+      bundle:
+        description: Bundle to build, e.g. 2026.5.25.1 (empty = the one bundles/latest.json points to)
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -38,27 +30,8 @@ jobs:
           shellcheck scripts/*.sh
           python3 -m unittest discover -s tests -v
 
-  # The monthly run only builds when an input (base image or a component release)
-  # differs from the last published image. A manual run always builds.
-  check:
-    needs: validate
-    if: github.event_name != 'push'
-    runs-on: ubuntu-24.04
-    outputs:
-      changed: ${{ steps.compare.outputs.changed }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Compare inputs with the last published image
-        id: compare
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/image-inputs-changed.py
-
   build:
-    needs: [validate, check]
-    if: >-
-      github.event_name != 'push' &&
-      (github.event_name != 'schedule' || needs.check.outputs.changed == 'true')
+    needs: validate
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 180
     steps:
@@ -70,7 +43,8 @@ jobs:
       - name: Download and verify release inputs
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/download-image-inputs.py "$RUNNER_TEMP/inputs"
+          BUNDLE: ${{ inputs.bundle }}
+        run: python3 scripts/download-image-inputs.py "$RUNNER_TEMP/inputs" "$BUNDLE"
       - name: Build image
         run: |
           mkdir -p "$RUNNER_TEMP/output"
@@ -91,8 +65,7 @@ jobs:
     if: >-
       github.repository == 'htl-stp-ecer/raccoon-image' &&
       github.ref == 'refs/heads/main' &&
-      (github.event_name == 'schedule' ||
-       (github.event_name == 'workflow_dispatch' && inputs.publish))
+      inputs.publish
     runs-on: ubuntu-24.04
     permissions:
       contents: write

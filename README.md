@@ -30,12 +30,11 @@ Licensed under the GNU General Public License v3.0 — see [COPYING](COPYING) fo
 
 # Automated images
 
-The **Build updated image** GitHub Action runs on the first of every month at 00:00 UTC
-and publishes a new image only if the base image or the release of `raccoon-lib`,
-`raccoon-cli`, `stm32-data-reader` or `botui` differs from the last published image
-(`scripts/image-inputs-changed.py` compares them with that release's `manifest.json`);
-otherwise the run ends without building. Changes to Debian packages alone do not trigger
-a new image. A manual run always builds. Download `raccoon-os.img.xz` and `SHA256SUMS` from the
+The **Build updated image** GitHub Action is started manually. It builds the component
+versions pinned in a bundle: by default the one `bundles/latest.json` points to, or the
+bundle named in the `bundle` input (a file `bundles/<name>.json`). The release tags in the
+bundle must have the assets the build expects, otherwise it fails. It publishes a release
+only if `publish` is set on `main`. Download `raccoon-os.img.xz` and `SHA256SUMS` from the
 [image releases](https://github.com/htl-stp-ecer/raccoon-image/releases), verify the
 checksum, then select **Use custom** in Raspberry Pi Imager to flash the compressed
 image.
@@ -48,8 +47,8 @@ anything else. [HOW-IT-WAS-BUILT.md](debian-trixie/base-image/HOW-IT-WAS-BUILT.m
 documents exactly how it was made.
 
 On top of the base image the build upgrades the OS packages and installs the latest
-released `raccoon-lib` (`raccoon_library` and `raccoon_sim`), `raccoon-cli`,
-`stm32-data-reader` and `botui`. It resolves the component versions once per build and
+bundled `raccoon-lib` (`raccoon_library` and `raccoon_sim`), `raccoon-cli`,
+`stm32-data-reader` and `botui`. It takes the component versions from the bundle and
 verifies GitHub's asset digests. Missing or ambiguous assets fail the build.
 `manifest.json`, `packages.txt` and `python-packages.txt` record the inputs and the
 installed dependencies; the image also contains them in `/etc/raccoon-image`.

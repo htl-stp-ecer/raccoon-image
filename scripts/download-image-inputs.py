@@ -9,6 +9,7 @@ import sys
 
 REPO = "htl-stp-ecer/raccoon-image"
 BASE_TAG = "base-2026-11-01"
+BUNDLES_DIR = Path(__file__).parents[1] / "bundles"
 BASE_CHECKSUM_FILE = Path(__file__).parents[1] / "debian-trixie/base-image/raccoon-os-base.img.xz.sha256"
 # (name in the manifest, repository, asset pattern, directory below the inputs).
 # Two entries may share a directory; they must then come from the same release.
@@ -27,6 +28,22 @@ def read_base_checksum(path=BASE_CHECKSUM_FILE):
     if len(parts) != 2 or len(parts[0]) != 64:
         raise ValueError(f"Invalid checksum file: {path}")
     return parts[0], parts[1].lstrip("*")
+
+
+def read_bundle(bundle=None, bundles_dir=BUNDLES_DIR):
+    """Return (bundle name, {repository: release tag}) of a bundle manifest.
+
+    Without a name, bundles/latest.json points at the bundle to use.
+    """
+    if bundle is None:
+        bundle = json.loads((bundles_dir / "latest.json").read_text())["ref"]
+    if Path(bundle).name != bundle:
+        raise ValueError(f"Invalid bundle name: {bundle}")
+    components = json.loads((bundles_dir / f"{bundle}.json").read_text())["components"]
+    missing = sorted({repo for _, repo, _, _ in COMPONENTS} - {r for r, t in components.items() if t})
+    if missing:
+        raise ValueError(f"Bundle {bundle} has no release for: {', '.join(missing)}")
+    return bundle, components
 
 
 def select_asset(release, pattern):
@@ -63,15 +80,14 @@ def download(repo, tag, pattern, dest, expected=None):
 
 def main():
     dest = Path(sys.argv[1])
+    bundle, tags = read_bundle(sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] else None)
     base_sha256, base_asset = read_base_checksum()
-    manifest = {"base": download(REPO, BASE_TAG, base_asset, dest / "base", base_sha256),
+    manifest = {"bundle": bundle,
+                "base": download(REPO, BASE_TAG, base_asset, dest / "base", base_sha256),
                 "components": {}}
-    tags = {}
     for name, repo, pattern, directory in COMPONENTS:
-        entry = download(f"htl-stp-ecer/{repo}", None, pattern, dest / directory)
-        if tags.setdefault(repo, entry["tag"]) != entry["tag"]:
-            raise ValueError(f"{repo} published a new release during the download; run again")
-        manifest["components"][name] = entry
+        manifest["components"][name] = download(
+            f"htl-stp-ecer/{repo}", tags[repo], pattern, dest / directory)
     (dest / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
 
