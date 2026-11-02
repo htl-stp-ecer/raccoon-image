@@ -65,7 +65,6 @@ jobs:
           owner: htl-stp-ecer
           repositories: raccoon-image,raccoon-example
           permission-contents: write
-          permission-actions: write
 
       - uses: actions/checkout@v4
         with:
@@ -122,9 +121,10 @@ jobs:
           echo "::error::could not push the bundle to main after 3 attempts"
           exit 1
 
-      # A push with the workflow token does not start other workflows; an API
-      # dispatch with the app token does. The dispatch comes after the push so the
-      # image run sees the new manifest.
+      # A push with the workflow token does not start other workflows; an API call with the
+      # app token does. The image build is started with a repository_dispatch (event
+      # build-image, see image.yml), which needs only contents: write. The dispatch comes after
+      # the push so the image run sees the new manifest.
       - name: Start the image build
         id: image
         if: ${{ inputs.publish && inputs.build_image }}
@@ -132,8 +132,11 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          gh workflow run image.yml --repo "$GITHUB_REPOSITORY" --ref main \
-            -f bundle="${{ steps.bundle.outputs.name }}" -f publish=true
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/dispatches" \
+            -d '{"event_type":"build-image","client_payload":{"bundle":"${{ steps.bundle.outputs.name }}","publish":true}}'
 
       - name: Update the pins in raccoon-example
         id: example
@@ -152,5 +155,5 @@ jobs:
       - name: Report a failed image dispatch
         if: ${{ always() && steps.image.outcome == 'failure' }}
         run: |
-          echo "::error::The bundle ${{ steps.bundle.outputs.name }} was committed, but starting image.yml failed. Run 'Build updated image' by hand with bundle=${{ steps.bundle.outputs.name }}."
+          echo "::error::The bundle ${{ steps.bundle.outputs.name }} was committed, but starting the image build failed. Run 'Build updated image' by hand with bundle=${{ steps.bundle.outputs.name }}."
           exit 1
