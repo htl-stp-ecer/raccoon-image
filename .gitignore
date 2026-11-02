@@ -1,4 +1,5 @@
 .idea/
 .env
 StpLib/
-linux/
+linux/__pycache__/
+*.pyc
