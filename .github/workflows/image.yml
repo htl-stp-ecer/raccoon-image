@@ -80,23 +80,18 @@ jobs:
           GH_REPO: ${{ github.repository }}
           BUILD_SHA: ${{ github.sha }}
         run: |
-          tag="image-$(date -u +%Y-%m-%d)-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          bundle=$(jq -r .bundle output/manifest.json)
+          tag="$bundle"
           cat > notes.md <<'NOTES'
-          Automated refresh of the Trixie RaccoonOS base image with current OS packages
-          and the latest released Raccoon components. See manifest.json for input
-          versions and hashes, and the package inventories for installed dependencies.
+          To install this image, refer to [the RaccoonOS quick start guide](https://raccoon-docs.pages.dev/00-quick-start/).
 
-          Flash raccoon-os.img.xz to an SD card with Raspberry Pi Imager (Use custom).
-          Verify the download with SHA256SUMS. Wired networking uses DHCP; configure
-          Wi-Fi after boot. The base image's user/password are retained; SSH host keys are
-          created on the first boot.
-
-          STM32 firmware is staged in /home/pi/flashFiles; flash it on the physical bot
-          using the supplied flash_wombat.sh if a firmware update is needed. CI cannot
-          validate the display, Ethernet hardware, or coprocessor on a real bot.
+          Contains the following components:
+          
           NOTES
+          jq -r '.components | to_entries[] | select(.key != "raccoon-sim")
+                 | "- \(.key): \(.value.tag)"' output/manifest.json >> notes.md
           # Create a draft first so users never see a partially uploaded release.
           gh release create "$tag" --target "$BUILD_SHA" --draft \
-            --title "RaccoonOS monthly image $(date -u +%Y-%m-%d)" \
+            --title "RaccoonOS $bundle" \
             --notes-file notes.md output/*
           gh release edit "$tag" --draft=false --latest
