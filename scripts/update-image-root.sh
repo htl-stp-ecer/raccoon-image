@@ -20,7 +20,20 @@ python3 -m pip install --upgrade uv
 mkdir -p /tmp/raccoon-server /tmp/raccoon-reader
 tar -xzf /tmp/image-inputs/raccoon-cli/*.tar.gz -C /tmp/raccoon-server
 tar -xzf /tmp/image-inputs/stm32-data-reader/*.tar.gz -C /tmp/raccoon-reader
-python3 -m pip install --upgrade /tmp/raccoon-server/*.whl /tmp/image-inputs/raccoon-lib/*.whl
+# The transport is pinned to exactly the version the bundle names; before the
+# contract check existed it came in unpinned through the CLI/lib dependency.
+transport_version=$(python3 - <<'PY'
+import json
+manifest = json.load(open('/tmp/image-inputs/manifest.json'))
+print(manifest['components'].get('raccoon-transport', {}).get('tag', '').lstrip('v'))
+PY
+)
+pip_specs=(/tmp/raccoon-server/*.whl /tmp/image-inputs/raccoon-lib/*.whl)
+if [[ -n "$transport_version" ]]; then pip_specs+=("raccoon-transport==$transport_version"); fi
+python3 -m pip install --upgrade "${pip_specs[@]}"
+if [[ -n "$transport_version" ]]; then
+    [[ "$(python3 -m pip show raccoon-transport | sed -n 's/^Version: //p')" == "$transport_version" ]]
+fi
 apt-get install -y /tmp/image-inputs/botui/*.deb
 install -Dm755 /tmp/raccoon-reader/stm32_data_reader /home/pi/stm32_data_reader/stm32_data_reader
 install -m644 /tmp/raccoon-reader/*.service /etc/systemd/system/
@@ -104,6 +117,20 @@ find /var/log -type f -exec truncate -s 0 {} +
 systemctl enable regenerate_ssh_host_keys.service
 mkdir -p /etc/raccoon-image
 cp /tmp/image-inputs/manifest.json /etc/raccoon-image/manifest.json
+# Transport contract: the bundle manifest is the single source of truth on the
+# device (components compare their compiled-in hash with it at start). Older
+# bundles have no contract; they get no file and their components do not check.
+if [[ -f /tmp/image-inputs/raccoon-bundle.json ]]; then
+    install -Dm644 /tmp/image-inputs/raccoon-bundle.json /etc/raccoon-bundle.json
+    # Status files of the startup check live in tmpfs; every component writes its own.
+    printf 'd /run/raccoon 1777 root root -\n' > /etc/tmpfiles.d/raccoon.conf
+    python3 - <<'PY'
+import json
+import raccoon_transport
+expected = json.load(open('/etc/raccoon-bundle.json'))['contract_hash']
+assert raccoon_transport.contract_hash() == expected, (raccoon_transport.contract_hash(), expected)
+PY
+fi
 dpkg-query -W > /etc/raccoon-image/packages.txt
 python3 -m pip freeze > /etc/raccoon-image/python-packages.txt
 rm -rf /tmp/raccoon-server /tmp/raccoon-reader /tmp/reader-libraries.txt

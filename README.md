@@ -53,7 +53,30 @@ verifies GitHub's asset digests. Missing or ambiguous assets fail the build.
 `manifest.json`, `packages.txt` and `python-packages.txt` record the inputs and the
 installed dependencies; the image also contains them in `/etc/raccoon-image`.
 Newly released component combinations are not guaranteed to have been tested together.
-The mutable `bundles/dev.json` is not required.
+The mutable `bundles/dev.json` is not required, and an image is never built from it.
+
+## Transport contract
+
+Newer bundles also name the exact `raccoon-transport` release and its **contract hash**:
+
+```json
+{
+  "bundle": "2026.11.02",
+  "contract_hash": "93ac36836810c9fe",
+  "components": { "raccoon-transport": "v69", "raccoon-cli": "v173", "...": "..." }
+}
+```
+
+The build downloads `contract-hash.txt` from that transport release and requires it to equal
+the bundle's hash, then reads the marker `RACCOON_CONTRACT_V1=<hash>` out of every artifact that
+contains compiled transport code (`scripts/scan_artifacts.py`: the `raccoon_sim` aarch64 wheel,
+the Bot UI `.deb`, the STM reader tarball). Any other hash, a missing marker or a missing
+artifact fails the build with a table. Transport is installed pinned
+(`raccoon-transport==<version>`), the bundle manifest is copied to `/etc/raccoon-bundle.json`
+on the device, and `/run/raccoon` is created for the status files of the startup check
+(see `contract/CHECK_SPEC.md` in raccoon-transport). A `contract_hash` of `dev` or an empty
+one fails the build; bundles without any contract field (older ones) still build, without a
+device bundle file.
 
 Wired networking uses DHCP. Saved network profiles are removed, so configure Wi-Fi
 after boot. SSH host keys and the machine identity are created on the first boot. The

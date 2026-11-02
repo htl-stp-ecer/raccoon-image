@@ -90,6 +90,9 @@ jobs:
           NOTES
           jq -r '.components | to_entries[] | select(.key != "raccoon-sim")
                  | "- \(.key): \(.value.tag)"' output/manifest.json >> notes.md
+          # Bundles with a transport contract also name its hash.
+          jq -r '.components["raccoon-transport"].contract_hash // empty
+                 | "- transport contract hash: \(.)"' output/manifest.json >> notes.md
           # Create a draft first so users never see a partially uploaded release.
           gh release create "$tag" --target "$BUILD_SHA" --draft \
             --title "RaccoonOS $bundle" \
