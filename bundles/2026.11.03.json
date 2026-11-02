@@ -1,0 +1,12 @@
+{
+  "bundle": "2026.11.03",
+  "components": {
+    "raccoon-lib": "v156",
+    "raccoon-cli": "v174",
+    "stm32-data-reader": "v59",
+    "raccoon-cam": "",
+    "botui": "v75",
+    "raccoon-transport": "v70"
+  },
+  "contract_hash": "93ac36836810c9fe"
+}
