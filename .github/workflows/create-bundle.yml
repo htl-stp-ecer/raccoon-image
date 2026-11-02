@@ -111,7 +111,16 @@ jobs:
           git config user.email "raccoon-os-bot[bot]@users.noreply.github.com"
           git add bundles/
           git commit -m "chore: bundle ${{ steps.bundle.outputs.name }}"
-          git push origin HEAD:main
+          # bundle.yml commits bundles/dev.json to main after every component release, which is
+          # exactly when this workflow is usually started. Take those commits in and try again
+          # instead of failing on a non-fast-forward push (this commit only adds new files).
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push origin HEAD:main; then exit 0; fi
+            echo "push rejected (attempt $attempt), retrying"
+          done
+          echo "::error::could not push the bundle to main after 3 attempts"
+          exit 1
 
       # A push with the workflow token does not start other workflows; an API
       # dispatch with the app token does. The dispatch comes after the push so the
