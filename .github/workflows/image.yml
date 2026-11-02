@@ -1,6 +1,11 @@
 name: Build updated image
 
 on:
+  # Create Bundle starts the build with this event: sending it needs only contents: write,
+  # which the Raccoon OS Bot has (starting a workflow_dispatch would need actions: write).
+  # client_payload: { "bundle": "<name>", "publish": true }
+  repository_dispatch:
+    types: [build-image]
   workflow_dispatch:
     inputs:
       publish:
@@ -43,7 +48,7 @@ jobs:
       - name: Download and verify release inputs
         env:
           GH_TOKEN: ${{ github.token }}
-          BUNDLE: ${{ inputs.bundle }}
+          BUNDLE: ${{ inputs.bundle || github.event.client_payload.bundle }}
         run: python3 scripts/download-image-inputs.py "$RUNNER_TEMP/inputs" "$BUNDLE"
       - name: Build image
         run: |
@@ -65,7 +70,7 @@ jobs:
     if: >-
       github.repository == 'htl-stp-ecer/raccoon-image' &&
       github.ref == 'refs/heads/main' &&
-      inputs.publish
+      (inputs.publish || github.event.client_payload.publish == true)
     runs-on: ubuntu-24.04
     permissions:
       contents: write
