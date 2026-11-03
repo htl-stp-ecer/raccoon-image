@@ -58,7 +58,7 @@ if [[ -f "$inputs/raccoon-bundle.json" ]]; then
 fi
 cp "$script_dir/update-image-root.sh" "$root/tmp/update-image-root.sh"
 chroot "$root" /bin/bash /tmp/update-image-root.sh
-cp "$root/etc/raccoon-image/"*.txt "$output/"
+cp "$root/etc/raccoon-image/packages.txt" "$root/etc/raccoon-image/python-packages.txt" "$output/"
 rm "$root/etc/resolv.conf" "$root/usr/sbin/policy-rc.d"
 cp -a "$work/resolv.conf" "$root/etc/resolv.conf"
 if [[ -e "$work/policy-rc.d" ]]; then cp -a "$work/policy-rc.d" "$root/usr/sbin/policy-rc.d"; fi
