@@ -35,7 +35,7 @@ REQUIRED = [
 # Pure Python or without transport code: any marker found must still match.
 OPTIONAL = [
     ("raccoon-lib", "raccoon_library-*.whl"),
-    ("raccoon-cli", "raccoon-server-*.tar.gz"),
+    ("raccoon-cli", "raccoon_cli-*.whl"),
 ]
 
 

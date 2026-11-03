@@ -96,7 +96,7 @@ class GateTests(unittest.TestCase):
         make_wheel(self.inputs / "raccoon-lib/raccoon_library-155-py3-none-any.whl", b"pure python")
         make_deb(self.inputs / "botui/botui_73_arm64.deb", blob(deb), self.work)
         make_tarball(self.inputs / "stm32-data-reader/stm32_data_reader-v58.tar.gz", blob(reader))
-        make_tarball(self.inputs / "raccoon-cli/raccoon-server-173.tar.gz", b"cli without marker")
+        make_wheel(self.inputs / "raccoon-cli/raccoon_cli-173-py3-none-any.whl", b"cli without marker")
 
     def test_all_matching_passes(self):
         rows = scan.scan_inputs(self.inputs, GOOD)

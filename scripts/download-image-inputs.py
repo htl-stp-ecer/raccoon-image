@@ -22,7 +22,7 @@ BASE_CHECKSUM_FILE = Path(__file__).parents[1] / "debian-trixie/base-image/racco
 COMPONENTS = [
     ("raccoon-lib", "raccoon-lib", "raccoon_library-*.whl", "raccoon-lib"),
     ("raccoon-sim", "raccoon-lib", "raccoon_sim-*aarch64*.whl", "raccoon-lib"),
-    ("raccoon-cli", "raccoon-cli", "raccoon-server-*.tar.gz", "raccoon-cli"),
+    ("raccoon-cli", "raccoon-cli", "raccoon_cli-*.whl", "raccoon-cli"),
     ("stm32-data-reader", "stm32-data-reader", "stm32_data_reader-*.tar.gz", "stm32-data-reader"),
     ("botui", "botui", "botui_*_arm64.deb", "botui"),
 ]

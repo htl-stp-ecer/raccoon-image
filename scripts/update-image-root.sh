@@ -24,8 +24,7 @@ test -s /boot/firmware/overlays/tsc2007.dtbo
 find /lib/modules -name 'tsc2007.ko*' -print -quit | grep -q .
 apt-get install -y python3-pip network-manager
 python3 -m pip install --upgrade uv
-mkdir -p /tmp/raccoon-server /tmp/raccoon-reader
-tar -xzf /tmp/image-inputs/raccoon-cli/*.tar.gz -C /tmp/raccoon-server
+mkdir -p /tmp/raccoon-reader
 tar -xzf /tmp/image-inputs/stm32-data-reader/*.tar.gz -C /tmp/raccoon-reader
 # The transport is pinned to exactly the version the bundle names; before the
 # contract check existed it came in unpinned through the CLI/lib dependency.
@@ -35,7 +34,7 @@ manifest = json.load(open('/tmp/image-inputs/manifest.json'))
 print(manifest['components'].get('raccoon-transport', {}).get('tag', '').lstrip('v'))
 PY
 )
-pip_specs=(/tmp/raccoon-server/*.whl /tmp/image-inputs/raccoon-lib/*.whl)
+pip_specs=(/tmp/image-inputs/raccoon-cli/*.whl /tmp/image-inputs/raccoon-lib/*.whl)
 if [[ -n "$transport_version" ]]; then pip_specs+=("raccoon-transport==$transport_version"); fi
 python3 -m pip install --upgrade "${pip_specs[@]}"
 if [[ -n "$transport_version" ]]; then
@@ -146,4 +145,4 @@ PY
 fi
 dpkg-query -W > /etc/raccoon-image/packages.txt
 python3 -m pip freeze > /etc/raccoon-image/python-packages.txt
-rm -rf /tmp/raccoon-server /tmp/raccoon-reader /tmp/reader-libraries.txt
+rm -rf /tmp/raccoon-reader /tmp/reader-libraries.txt
