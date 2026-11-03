@@ -39,11 +39,13 @@ jobs:
           STM32=$(gh release view --repo htl-stp-ecer/stm32-data-reader --json tagName -q .tagName 2>/dev/null || echo "")
           CAM=$(gh release view --repo htl-stp-ecer/raccoon-cam --json tagName -q .tagName 2>/dev/null || echo "")
           BOTUI=$(gh release view --repo htl-stp-ecer/botui --json tagName -q .tagName 2>/dev/null || echo "")
+          TRANSPORT=$(gh release view --repo htl-stp-ecer/raccoon-transport --json tagName -q .tagName 2>/dev/null || echo "")
           echo "lib=$LIB" >> $GITHUB_OUTPUT
           echo "cli=$CLI" >> $GITHUB_OUTPUT
           echo "stm32=$STM32" >> $GITHUB_OUTPUT
           echo "cam=$CAM" >> $GITHUB_OUTPUT
           echo "botui=$BOTUI" >> $GITHUB_OUTPUT
+          echo "transport=$TRANSPORT" >> $GITHUB_OUTPUT
 
       - name: Write bundles/dev.json
         run: |
@@ -58,6 +60,7 @@ jobs:
                   'stm32-data-reader': '${{ steps.versions.outputs.stm32 }}',
                   'raccoon-cam':       '${{ steps.versions.outputs.cam }}',
                   'botui':             '${{ steps.versions.outputs.botui }}',
+                  'raccoon-transport': '${{ steps.versions.outputs.transport }}',
               }
           }
           print(json.dumps(manifest, indent=2))

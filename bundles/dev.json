@@ -5,6 +5,7 @@
     "raccoon-cli": "v174",
     "stm32-data-reader": "v59",
     "raccoon-cam": "",
-    "botui": "v77"
+    "botui": "v77",
+    "raccoon-transport": "v70"
   }
 }
