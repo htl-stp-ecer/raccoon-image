@@ -10,6 +10,13 @@ export PYTHONNOUSERSITE=1
 [[ "$VERSION_CODENAME" == trixie ]]
 [[ "$(dpkg --print-architecture)" == arm64 ]]
 id pi
+# Transport contract: install the bundle manifest first, before any component, so
+# nothing installed later (or imported in this script) runs without it.
+if [[ -f /tmp/image-inputs/raccoon-bundle.json ]]; then
+    install -Dm644 /tmp/image-inputs/raccoon-bundle.json /etc/raccoon-bundle.json
+    # Status files of the startup check live in tmpfs; every component writes its own.
+    printf 'd /run/raccoon 1777 root root -\n' > /etc/tmpfiles.d/raccoon.conf
+fi
 apt-get update
 apt-get -y -o Dpkg::Options::=--force-confold full-upgrade
 # The refreshed kernel must still provide the bot's touchscreen support.
@@ -130,9 +137,6 @@ cp /tmp/image-inputs/manifest.json /etc/raccoon-image/manifest.json
 # device (components compare their compiled-in hash with it at start). Older
 # bundles have no contract; they get no file and their components do not check.
 if [[ -f /tmp/image-inputs/raccoon-bundle.json ]]; then
-    install -Dm644 /tmp/image-inputs/raccoon-bundle.json /etc/raccoon-bundle.json
-    # Status files of the startup check live in tmpfs; every component writes its own.
-    printf 'd /run/raccoon 1777 root root -\n' > /etc/tmpfiles.d/raccoon.conf
     python3 - <<'PY'
 import json
 import raccoon_transport
