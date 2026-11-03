@@ -58,6 +58,8 @@ for unit in units.glob('*.service'):
     shutil.copy2(unit, '/etc/systemd/system')
 PY
 systemctl enable raccoon.service flutter-ui.service stm32_data_reader.service lcm-loopback-multicast.service NetworkManager.service
+mkdir -p /etc/raccoon-image
+printf '\033[2J\033[H\nFirst-Boot Setup, please wait...\n' > /etc/raccoon-image/first-boot.txt
 # Run the upstream setup on first boot, where systemd is available.
 cat > /etc/systemd/system/raccoon-image-setup.service <<'UNIT'
 [Unit]
@@ -68,6 +70,7 @@ ConditionPathExists=!/var/lib/raccoon-image-configured
 
 [Service]
 Type=oneshot
+ExecStartPre=-/bin/sh -c 'cat /etc/raccoon-image/first-boot.txt > /dev/tty1'
 ExecStart=/usr/bin/raspi-config --expand-rootfs
 ExecStart=/usr/bin/python3 -m raccoon_cli.server.cli post-install
 ExecStart=/usr/bin/touch /var/lib/raccoon-image-configured
@@ -77,6 +80,12 @@ ExecStart=/usr/bin/systemctl --no-block reboot
 WantedBy=multi-user.target
 UNIT
 systemctl enable raccoon-image-setup.service
+# No UI during the first-boot setup; it starts after the setup has finished.
+mkdir -p /etc/systemd/system/flutter-ui.service.d
+cat > /etc/systemd/system/flutter-ui.service.d/first-boot.conf <<'CONF'
+[Unit]
+ConditionPathExists=/var/lib/raccoon-image-configured
+CONF
 rm -f /var/lib/raccoon-image-configured
 # A generic wired DHCP profile avoids inheriting a captured bot's MAC/IP binding.
 rm -f /etc/NetworkManager/system-connections/*
