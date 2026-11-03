@@ -24,7 +24,7 @@ COMPONENTS = [
     ("raccoon-sim", "raccoon-lib", "raccoon_sim-*aarch64*.whl", "raccoon-lib"),
     ("raccoon-cli", "raccoon-cli", "raccoon-server-*.tar.gz", "raccoon-cli"),
     ("stm32-data-reader", "stm32-data-reader", "stm32_data_reader-*.tar.gz", "stm32-data-reader"),
-    ("botui", "botui", "stp-velox_*_arm64.deb", "botui"),
+    ("botui", "botui", "botui_*_arm64.deb", "botui"),
 ]
 
 

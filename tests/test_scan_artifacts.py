@@ -48,7 +48,7 @@ def make_deb(path, payload, work):
     (root / "opt/app").mkdir(parents=True)
     (root / "opt/app/libapp.so").write_bytes(payload)
     (root / "DEBIAN/control").write_text(
-        "Package: stp-velox\nVersion: 1\nArchitecture: arm64\nMaintainer: t <t@example.com>\nDescription: t\n")
+        "Package: botui\nVersion: 1\nArchitecture: arm64\nMaintainer: t <t@example.com>\nDescription: t\n")
     subprocess.run(["dpkg-deb", "--build", str(root), str(path)], check=True, capture_output=True)
 
 
@@ -94,7 +94,7 @@ class GateTests(unittest.TestCase):
     def put_all(self, sim=GOOD, deb=GOOD, reader=GOOD):
         make_wheel(self.inputs / "raccoon-lib/raccoon_sim-155-cp313-cp313-manylinux_2_27_aarch64.whl", blob(sim))
         make_wheel(self.inputs / "raccoon-lib/raccoon_library-155-py3-none-any.whl", b"pure python")
-        make_deb(self.inputs / "botui/stp-velox_73_arm64.deb", blob(deb), self.work)
+        make_deb(self.inputs / "botui/botui_73_arm64.deb", blob(deb), self.work)
         make_tarball(self.inputs / "stm32-data-reader/stm32_data_reader-v58.tar.gz", blob(reader))
         make_tarball(self.inputs / "raccoon-cli/raccoon-server-173.tar.gz", b"cli without marker")
 
@@ -110,16 +110,16 @@ class GateTests(unittest.TestCase):
         self.assertIn("stm32_data_reader-v58.tar.gz", text)
         self.assertIn(OTHER, text)
         self.assertIn("MISMATCH", text)
-        self.assertNotIn("botui/stp-velox_73_arm64.deb  93ac36836810c9fe  MISMATCH", text)
+        self.assertNotIn("botui/botui_73_arm64.deb  93ac36836810c9fe  MISMATCH", text)
 
     def test_required_artifact_without_marker_fails_loudly(self):
-        make_deb(self.inputs / "botui/stp-velox_73_arm64.deb", b"no marker here", self.work)
+        make_deb(self.inputs / "botui/botui_73_arm64.deb", b"no marker here", self.work)
         with self.assertRaises(ValueError) as raised:
             scan.scan_inputs(self.inputs, GOOD)
         self.assertIn("NO MARKER", str(raised.exception))
 
     def test_missing_required_artifact_fails(self):
-        (self.inputs / "botui/stp-velox_73_arm64.deb").unlink()
+        (self.inputs / "botui/botui_73_arm64.deb").unlink()
         with self.assertRaises(ValueError) as raised:
             scan.scan_inputs(self.inputs, GOOD)
         self.assertIn("MISSING ARTIFACT", str(raised.exception))

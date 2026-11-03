@@ -43,7 +43,7 @@ class MainFlowTest(unittest.TestCase):
             "raccoon_sim-*aarch64*.whl": "raccoon_sim-155-cp313-cp313-manylinux_2_27_aarch64.whl",
             "raccoon-server-*.tar.gz": "raccoon-server-173.tar.gz",
             "stm32_data_reader-*.tar.gz": "stm32_data_reader-v58.tar.gz",
-            "stp-velox_*_arm64.deb": "stp-velox_73_arm64.deb",
+            "botui_*_arm64.deb": "botui_73_arm64.deb",
             "contract-hash.txt": "contract-hash.txt",
         }.get(pattern, "raccoon-os-base.img.xz")
         path = dest / name
