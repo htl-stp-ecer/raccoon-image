@@ -30,12 +30,12 @@ CHUNK = 4 * 1024 * 1024
 REQUIRED = [
     ("raccoon-lib", "raccoon_sim-*aarch64*.whl"),
     ("botui", "botui_*_arm64.deb"),
-    ("stm32-data-reader", "stm32_data_reader-*.tar.gz"),
+    ("stm32-data-reader", "stm32-data-reader_*_arm64.deb"),
 ]
 # Pure Python or without transport code: any marker found must still match.
 OPTIONAL = [
     ("raccoon-lib", "raccoon_library-*.whl"),
-    ("raccoon-cli", "raccoon-server-*.tar.gz"),
+    ("raccoon-cli", "raccoon_cli-*.whl"),
 ]
 
 
