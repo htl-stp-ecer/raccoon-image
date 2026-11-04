@@ -82,7 +82,7 @@ Wired networking uses DHCP. Saved network profiles are removed, so configure Wi-
 after boot. SSH host keys and the machine identity are created on the first boot. The
 upstream server setup runs once on first boot, which also expands the root partition and
 reboots once to use the full SD card.
-Matching STM32 firmware is included in `/home/pi/flashFiles`, but CI cannot flash
+Matching STM32 firmware is included in `/usr/lib/stm32-data-reader/firmware` (also reachable as `~/flashFiles`), but CI cannot flash
 the physical coprocessor. When needed, run `sudo bash flash_wombat.sh` from that
 directory on the bot. Hardware boot, touchscreen, Ethernet, and firmware testing
 remain necessary before competition use.
