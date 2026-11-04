@@ -24,8 +24,6 @@ test -s /boot/firmware/overlays/tsc2007.dtbo
 find /lib/modules -name 'tsc2007.ko*' -print -quit | grep -q .
 apt-get install -y python3-pip network-manager
 python3 -m pip install --upgrade uv
-mkdir -p /tmp/raccoon-reader
-tar -xzf /tmp/image-inputs/stm32-data-reader/*.tar.gz -C /tmp/raccoon-reader
 # The transport is pinned to exactly the version the bundle names; before the
 # contract check existed it came in unpinned through the CLI/lib dependency.
 transport_version=$(python3 - <<'PY'
@@ -41,16 +39,11 @@ if [[ -n "$transport_version" ]]; then
     [[ "$(python3 -m pip show raccoon-transport | sed -n 's/^Version: //p')" == "$transport_version" ]]
 fi
 apt-get install -y /tmp/image-inputs/botui/*.deb
-install -Dm755 /tmp/raccoon-reader/stm32_data_reader /home/pi/stm32_data_reader/stm32_data_reader
-install -m644 /tmp/raccoon-reader/*.service /etc/systemd/system/
-# Stage the matching firmware; flashing requires the physical coprocessor.
-mkdir -p /home/pi/flashFiles
-for file in wombat.bin flash_wombat.sh reset_coprocessor.sh init_gpio.sh; do
-    if [[ -f "/tmp/raccoon-reader/$file" ]]; then
-        install -m755 "/tmp/raccoon-reader/$file" "/home/pi/flashFiles/$file"
-    fi
-done
-chown -R pi:pi /home/pi/stm32_data_reader /home/pi/flashFiles /home/pi/stp-velox
+# The package installs the reader to /usr/bin, the matching STM32 firmware and its flash scripts
+# to /usr/lib/stm32-data-reader/firmware (linked from ~/flashFiles) and the systemd units.
+# Flashing requires the physical coprocessor, so the postinst skips it here.
+apt-get install -y /tmp/image-inputs/stm32-data-reader/*.deb
+chown -R pi:pi /home/pi/stp-velox
 rm -f /etc/systemd/system/iox2-janitor.service
 systemctl disable iox2-janitor.service 2>/dev/null || true
 mkdir -p /var/lib/systemd/linger
@@ -113,7 +106,7 @@ import raccoon_cli
 import raccoon
 import raccoon_transport
 PY
-ldd /home/pi/stm32_data_reader/stm32_data_reader > /tmp/reader-libraries.txt
+ldd /usr/bin/stm32_data_reader > /tmp/reader-libraries.txt
 if grep -q 'not found' /tmp/reader-libraries.txt; then
     cat /tmp/reader-libraries.txt >&2
     exit 1
@@ -145,4 +138,4 @@ PY
 fi
 dpkg-query -W > /etc/raccoon-image/packages.txt
 python3 -m pip freeze > /etc/raccoon-image/python-packages.txt
-rm -rf /tmp/raccoon-reader /tmp/reader-libraries.txt
+rm -rf /tmp/reader-libraries.txt

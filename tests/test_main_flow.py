@@ -42,7 +42,7 @@ class MainFlowTest(unittest.TestCase):
             "raccoon_library-*.whl": "raccoon_library-155-py3-none-any.whl",
             "raccoon_sim-*aarch64*.whl": "raccoon_sim-155-cp313-cp313-manylinux_2_27_aarch64.whl",
             "raccoon_cli-*.whl": "raccoon_cli-173-py3-none-any.whl",
-            "stm32_data_reader-*.tar.gz": "stm32_data_reader-v58.tar.gz",
+            "stm32-data-reader_*_arm64.deb": "stm32-data-reader_58_arm64.deb",
             "botui_*_arm64.deb": "botui_73_arm64.deb",
             "contract-hash.txt": "contract-hash.txt",
         }.get(pattern, "raccoon-os-base.img.xz")
@@ -52,7 +52,7 @@ class MainFlowTest(unittest.TestCase):
         elif name.endswith(".whl"):
             make_wheel(path, blob(self.markers["sim"]) if "sim" in name else b"pure")
         elif name.startswith("stm32"):
-            make_tarball(path, blob(self.markers["reader"]))
+            make_deb(path, blob(self.markers["reader"]), self.root)
         elif name.endswith(".deb"):
             make_deb(path, blob(self.markers["deb"]), self.root)
         else:
