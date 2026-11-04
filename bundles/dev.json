@@ -1,7 +1,7 @@
 {
   "bundle": "dev",
   "components": {
-    "raccoon-lib": "v157",
+    "raccoon-lib": "v158",
     "raccoon-cli": "v181",
     "stm32-data-reader": "v61",
     "raccoon-cam": "",
