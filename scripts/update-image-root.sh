@@ -23,6 +23,14 @@ apt-get -y -o Dpkg::Options::=--force-confold full-upgrade
 test -s /boot/firmware/overlays/tsc2007.dtbo
 find /lib/modules -name 'tsc2007.ko*' -print -quit | grep -q .
 apt-get install -y python3-pip network-manager
+# raccoon-cam (optional: older bundles have none) needs OpenCV from the distribution, not from pip.
+# Its post-install on first boot installs the unit and would install this package if it were missing.
+cam_wheels=(/tmp/image-inputs/raccoon-cam/*.whl)
+if [[ -e "${cam_wheels[0]}" ]]; then
+    apt-get install -y python3-opencv
+else
+    cam_wheels=()
+fi
 python3 -m pip install --upgrade uv
 # The transport is pinned to exactly the version the bundle names; before the
 # contract check existed it came in unpinned through the CLI/lib dependency.
@@ -32,7 +40,7 @@ manifest = json.load(open('/tmp/image-inputs/manifest.json'))
 print(manifest['components'].get('raccoon-transport', {}).get('tag', '').lstrip('v'))
 PY
 )
-pip_specs=(/tmp/image-inputs/raccoon-cli/*.whl /tmp/image-inputs/raccoon-lib/*.whl)
+pip_specs=(/tmp/image-inputs/raccoon-cli/*.whl /tmp/image-inputs/raccoon-lib/*.whl "${cam_wheels[@]}")
 if [[ -n "$transport_version" ]]; then pip_specs+=("raccoon-transport==$transport_version"); fi
 python3 -m pip install --upgrade "${pip_specs[@]}"
 if [[ -n "$transport_version" ]]; then
@@ -106,6 +114,15 @@ import raccoon_cli
 import raccoon
 import raccoon_transport
 PY
+if (( ${#cam_wheels[@]} )); then
+    # OpenCV (apt) and numpy (pip, pulled in by raccoon-lib) must work together: use them, do not just import.
+    python3 - <<'PY'
+import cv2
+import numpy as np
+import raccoon_cam
+cv2.cvtColor(np.zeros((2, 2, 3), np.uint8), cv2.COLOR_BGR2GRAY)
+PY
+fi
 ldd /usr/bin/stm32_data_reader > /tmp/reader-libraries.txt
 if grep -q 'not found' /tmp/reader-libraries.txt; then
     cat /tmp/reader-libraries.txt >&2
