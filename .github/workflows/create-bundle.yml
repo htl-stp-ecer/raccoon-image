@@ -32,6 +32,10 @@ on:
         description: stm32-data-reader release tag, e.g. v58 (empty = newest release)
         type: string
         default: ''
+      raccoon_cam:
+        description: raccoon-cam release tag, e.g. v3 (empty = newest release; without any release the bundle has no camera service)
+        type: string
+        default: ''
       build_image:
         description: Build the image from the new bundle
         type: boolean
@@ -83,13 +87,15 @@ jobs:
           IN_TRANSPORT: ${{ inputs.raccoon_transport }}
           IN_BOTUI: ${{ inputs.botui }}
           IN_STM32: ${{ inputs.stm32_data_reader }}
+          IN_CAM: ${{ inputs.raccoon_cam }}
         run: |
           python3 scripts/create_bundle.py \
             --raccoon-cli "$IN_CLI" \
             --raccoon-lib "$IN_LIB" \
             --raccoon-transport "$IN_TRANSPORT" \
             --botui "$IN_BOTUI" \
-            --stm32-data-reader "$IN_STM32"
+            --stm32-data-reader "$IN_STM32" \
+            --raccoon-cam "$IN_CAM"
 
       - name: Dry run
         if: ${{ !inputs.publish }}

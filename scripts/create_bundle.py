@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Create a numbered bundle from component releases, behind the transport contract gate.
 
-Run by .github/workflows/create-bundle.yml. Resolves the five versions, downloads
+Run by .github/workflows/create-bundle.yml. Resolves the versions (raccoon-cam is optional: without a release it stays out of the bundle), downloads
 and verifies the release assets (digests, one asset per pattern), checks that
 every artifact with compiled transport code carries the contract hash of the
 target transport release, picks the next name of the day and writes
@@ -46,6 +46,7 @@ INPUT_REPOS = {
     "raccoon-transport": "raccoon-transport",
     "botui": "botui",
     "stm32-data-reader": "stm32-data-reader",
+    "raccoon-cam": "raccoon-cam",
 }
 
 
@@ -108,11 +109,17 @@ def gh_api(endpoint: str) -> dict | None:
 
 
 def resolve_tag(repo: str, requested: str, api=gh_api) -> str:
-    """The release tag to use: the given one (either spelling), or the newest published release."""
+    """The release tag to use: the given one (either spelling), or the newest published release.
+
+    An optional repository without any published release resolves to "" (not in the bundle);
+    asking for a tag that does not exist is still an error.
+    """
     requested = (requested or "").strip()
     if not requested:
         release = api(f"repos/{ORG}/{repo}/releases/latest")  # skips drafts and pre-releases
         if not release:
+            if repo in image_inputs.OPTIONAL_REPOS:
+                return ""
             raise BundleError(f"{repo} has no published release")
         return release["tag_name"]
     for candidate in tag_candidates(requested):
@@ -132,7 +139,7 @@ def build_manifest(name: str, tags: dict[str, str], contract_hash: str) -> dict:
             "raccoon-lib": tags["raccoon-lib"],
             "raccoon-cli": tags["raccoon-cli"],
             "stm32-data-reader": tags["stm32-data-reader"],
-            "raccoon-cam": "",
+            "raccoon-cam": tags.get("raccoon-cam", ""),
             "botui": tags["botui"],
             "raccoon-transport": tags["raccoon-transport"],
         },
@@ -157,6 +164,8 @@ def gate(tags: dict[str, str], scratch: Path) -> str:
 
     try:
         for _, repo, pattern, directory in image_inputs.COMPONENTS:
+            if repo in image_inputs.OPTIONAL_REPOS and not tags.get(repo):
+                continue
             image_inputs.download(f"{ORG}/{repo}", tags[repo], pattern, scratch / directory)
     except (ValueError, subprocess.CalledProcessError) as error:
         raise BundleError(f"Release check failed: {error}") from error
@@ -183,7 +192,7 @@ def write_files(bundles_dir: Path, manifest: dict) -> None:
 def summary(tags: dict[str, str], requested: dict[str, str], name: str, contract_hash: str) -> str:
     lines = ["| component | requested | resolved |", "| --- | --- | --- |"]
     for key in INPUT_REPOS:
-        lines.append(f"| {key} | {requested.get(key) or 'latest'} | {tags[key]} |")
+        lines.append(f"| {key} | {requested.get(key) or 'latest'} | {tags[key] or '-'} |")
     return f"### Bundle {name}\n\nContract hash `{contract_hash}`\n\n" + "\n".join(lines) + "\n"
 
 
