@@ -44,6 +44,7 @@ class MainFlowTest(unittest.TestCase):
             "raccoon_cli-*.whl": "raccoon_cli-173-py3-none-any.whl",
             "stm32-data-reader_*_arm64.deb": "stm32-data-reader_58_arm64.deb",
             "botui_*_arm64.deb": "botui_73_arm64.deb",
+            "raccoon_cam-*.whl": "raccoon_cam-3-py3-none-any.whl",
             "contract-hash.txt": "contract-hash.txt",
         }.get(pattern, "raccoon-os-base.img.xz")
         path = dest / name
@@ -75,6 +76,21 @@ class MainFlowTest(unittest.TestCase):
         device = json.loads((self.dest / "raccoon-bundle.json").read_text())
         self.assertEqual(GOOD, device["contract_hash"])
         self.assertEqual("v69", device["components"]["raccoon-transport"])
+
+    def test_raccoon_cam_is_part_of_the_image_when_the_bundle_names_it(self):
+        self.write_bundle(components={"raccoon-lib": "v155", "raccoon-cli": "v173", "stm32-data-reader": "v58",
+                                      "raccoon-cam": "v3", "botui": "v73", "raccoon-transport": "v69"})
+        self.run_main()
+        manifest = json.loads((self.dest / "manifest.json").read_text())
+        self.assertEqual("v3", manifest["components"]["raccoon-cam"]["tag"])
+        self.assertTrue(next((self.dest / "raccoon-cam").glob("raccoon_cam-*.whl")))
+
+    def test_raccoon_cam_stays_out_when_the_bundle_leaves_it_empty(self):
+        self.write_bundle()  # "raccoon-cam": ""
+        self.run_main()
+        manifest = json.loads((self.dest / "manifest.json").read_text())
+        self.assertNotIn("raccoon-cam", manifest["components"])
+        self.assertFalse((self.dest / "raccoon-cam").exists())
 
     def test_old_bundle_still_builds_without_contract(self):
         self.write_bundle()

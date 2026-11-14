@@ -36,6 +36,7 @@ REQUIRED = [
 OPTIONAL = [
     ("raccoon-lib", "raccoon_library-*.whl"),
     ("raccoon-cli", "raccoon_cli-*.whl"),
+    ("raccoon-cam", "raccoon_cam-*.whl"),
 ]
 
 

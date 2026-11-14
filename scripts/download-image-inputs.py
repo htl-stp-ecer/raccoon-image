@@ -25,7 +25,11 @@ COMPONENTS = [
     ("raccoon-cli", "raccoon-cli", "raccoon_cli-*.whl", "raccoon-cli"),
     ("stm32-data-reader", "stm32-data-reader", "stm32-data-reader_*_arm64.deb", "stm32-data-reader"),
     ("botui", "botui", "botui_*_arm64.deb", "botui"),
+    ("raccoon-cam", "raccoon-cam", "raccoon_cam-*.whl", "raccoon-cam"),
 ]
+# Repositories a bundle may leave empty: older bundles were made before they had a release.
+# An empty tag means "not in this image"; every other repository must have one.
+OPTIONAL_REPOS = {"raccoon-cam"}
 
 
 def read_base_checksum(path=BASE_CHECKSUM_FILE):
@@ -49,7 +53,8 @@ def read_bundle(bundle=None, bundles_dir=None):
     if bundle == "dev":
         raise ValueError("The dev bundle is never built into an image")
     components = json.loads((bundles_dir / f"{bundle}.json").read_text())["components"]
-    missing = sorted({repo for _, repo, _, _ in COMPONENTS} - {r for r, t in components.items() if t})
+    required = {repo for _, repo, _, _ in COMPONENTS} - OPTIONAL_REPOS
+    missing = sorted(required - {r for r, t in components.items() if t})
     if missing:
         raise ValueError(f"Bundle {bundle} has no release for: {', '.join(missing)}")
     return bundle, components
@@ -142,6 +147,8 @@ def main():
                 "base": download(REPO, BASE_TAG, base_asset, dest / "base", base_sha256),
                 "components": {}}
     for name, repo, pattern, directory in COMPONENTS:
+        if repo in OPTIONAL_REPOS and not tags.get(repo):
+            continue
         manifest["components"][name] = download(
             f"htl-stp-ecer/{repo}", tags[repo], pattern, dest / directory)
     if contract:
