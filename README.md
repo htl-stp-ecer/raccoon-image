@@ -1,4 +1,4 @@
-# RaccoonOS Image Creator
+# raccoon-image
 
 This repo helps you understand how you can modify a base raspberry pi image into one used for the botball competition.
 
