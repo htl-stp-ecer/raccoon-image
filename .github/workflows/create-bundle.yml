@@ -1,9 +1,9 @@
 name: Create Bundle
 
 # Makes a numbered bundle from component releases, points bundles/latest.json at
-# it, optionally builds the image and updates the pins in raccoon-example.
+# it, optionally builds the image and updates the pins in raccoon-template.
 # Started by hand only. This is the only workflow that publishes bundles and
-# the only one that moves the pins in raccoon-example.
+# the only one that moves the pins in raccoon-template.
 #
 # The transport contract gate always runs before anything is committed and
 # cannot be switched off: every artifact with compiled transport code must carry
@@ -67,7 +67,7 @@ jobs:
           app-id: ${{ vars.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
           owner: htl-stp-ecer
-          repositories: raccoon-image,raccoon-example
+          repositories: raccoon-image,raccoon-template
           permission-contents: write
 
       - uses: actions/checkout@v4
@@ -144,7 +144,7 @@ jobs:
             "https://api.github.com/repos/$GITHUB_REPOSITORY/dispatches" \
             -d '{"event_type":"build-image","client_payload":{"bundle":"${{ steps.bundle.outputs.name }}","publish":true}}'
 
-      - name: Update the pins in raccoon-example
+      - name: Update the pins in raccoon-template
         id: example
         if: ${{ always() && steps.push.outcome == 'success' }}
         env:
@@ -153,7 +153,7 @@ jobs:
           curl -fsS -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/htl-stp-ecer/raccoon-example/dispatches \
+            https://api.github.com/repos/htl-stp-ecer/raccoon-template/dispatches \
             -d '{"event_type":"bundle-released","client_payload":{"bundle":"${{ steps.bundle.outputs.name }}","cli":"${{ steps.bundle.outputs.cli }}","lib":"${{ steps.bundle.outputs.lib }}"}}'
 
       # The bundle stays when the image dispatch fails; the image can be built
