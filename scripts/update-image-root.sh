@@ -31,7 +31,6 @@ if [[ -e "${cam_wheels[0]}" ]]; then
 else
     cam_wheels=()
 fi
-python3 -m pip install --upgrade uv
 # The transport is pinned to exactly the version the bundle names; before the
 # contract check existed it came in unpinned through the CLI/lib dependency.
 transport_version=$(python3 - <<'PY'
