@@ -1,5 +1,7 @@
 # raccoon-image
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](COPYING)
+
 This repo helps you understand how you can modify a base raspberry pi image into one used for the botball competition.
 
 # Getting started
