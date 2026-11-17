@@ -63,7 +63,7 @@ units = Path(raccoon_cli.__file__).parent / 'systemd'
 for unit in units.glob('*.service'):
     shutil.copy2(unit, '/etc/systemd/system')
 PY
-systemctl enable raccoon.service flutter-ui.service stm32_data_reader.service lcm-loopback-multicast.service NetworkManager.service
+systemctl enable raccoon.service flutter-ui.service stm32_data_reader.service NetworkManager.service
 mkdir -p /etc/raccoon-image
 printf '\033[2J\033[H\nFirst-Boot Setup, please wait...\n' > /etc/raccoon-image/first-boot.txt
 # Run the upstream setup on first boot, where systemd is available.
