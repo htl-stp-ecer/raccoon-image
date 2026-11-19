@@ -86,7 +86,7 @@ Now you can start the pi and connect via SSH. The display should be fine now.
 ```bash
 sudo apt install cmake libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdrm-dev libgbm-dev \
   ttf-mscorefonts-installer fontconfig libsystemd-dev libinput-dev libudev-dev \
-  libxkbcommon-dev git liblcm-dev
+  libxkbcommon-dev git
 ```
 
 ## 2. Install stm32flash
@@ -194,12 +194,6 @@ Clone and deploy the Raccoon toolchain to the pi.
 ## 9. Deploy BackendIDE
 
 Clone and deploy the BackendIDE to the pi.
-
-## 10. Install LCM Python Bindings
-
-```bash
-pip3 install lcm --break-system-packages
-```
 
 # Network Manager (for UI WiFi control)
 

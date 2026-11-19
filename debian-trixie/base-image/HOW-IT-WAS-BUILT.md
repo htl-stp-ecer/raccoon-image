@@ -96,7 +96,7 @@ The STM32 hangs on the Pi's UART, so no login shell may use it:
 ```
 sudo apt install -y cmake libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdrm-dev \
   libgbm-dev fontconfig libsystemd-dev libinput-dev libudev-dev libxkbcommon-dev git \
-  liblcm-dev stm32flash python3-pip evtest network-manager
+  stm32flash python3-pip evtest network-manager
 ```
 
 `flutter-pi` is C code that has to be compiled; the monthly build does **not** build it

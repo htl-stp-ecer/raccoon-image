@@ -1,4 +1,6 @@
-# RaccoonOS Image Creator
+# raccoon-image
+
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](COPYING)
 
 This repo helps you understand how you can modify a base raspberry pi image into one used for the botball competition.
 
@@ -48,7 +50,9 @@ documents exactly how it was made.
 
 On top of the base image the build upgrades the OS packages and installs the latest
 bundled `raccoon-lib` (`raccoon_library` and `raccoon_sim`), `raccoon-cli`,
-`stm32-data-reader` and `botui`. It takes the component versions from the bundle and
+`stm32-data-reader` and `botui`. A bundle that names a `raccoon-cam` release also gets the camera service:
+its wheel, and OpenCV from the distribution (`python3-opencv`); the first-boot setup then installs its systemd unit
+through the `raccoon-server` post-install. A bundle with an empty `raccoon-cam` (older ones) builds without it. It takes the component versions from the bundle and
 verifies GitHub's asset digests. Missing or ambiguous assets fail the build.
 `manifest.json`, `packages.txt` and `python-packages.txt` record the inputs and the
 installed dependencies; the image also contains them in `/etc/raccoon-image`.

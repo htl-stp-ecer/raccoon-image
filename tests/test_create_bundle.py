@@ -95,6 +95,29 @@ class TagTests(unittest.TestCase):
             cb.resolve_tag("raccoon-lib", "", lambda e: None)
 
 
+class OptionalComponentTests(unittest.TestCase):
+    def test_raccoon_cam_without_a_release_stays_out_of_the_bundle(self):
+        self.assertEqual("", cb.resolve_tag("raccoon-cam", "", api=lambda endpoint: None))
+
+    def test_a_requested_raccoon_cam_tag_that_does_not_exist_is_still_an_error(self):
+        with self.assertRaises(cb.BundleError):
+            cb.resolve_tag("raccoon-cam", "v9", api=lambda endpoint: None)
+
+    def test_raccoon_cam_with_a_release_is_resolved_and_written_to_the_manifest(self):
+        api = lambda endpoint: {"tag_name": "v3", "draft": False}
+        self.assertEqual("v3", cb.resolve_tag("raccoon-cam", "", api=api))
+        manifest = cb.build_manifest("2026.11.02", {**TAGS, "raccoon-cam": "v3"}, "0123456789abcdef")
+        self.assertEqual("v3", manifest["components"]["raccoon-cam"])
+
+    def test_the_other_repositories_still_need_a_release(self):
+        with self.assertRaises(cb.BundleError):
+            cb.resolve_tag("botui", "", api=lambda endpoint: None)
+
+    def test_an_empty_raccoon_cam_is_what_the_manifest_has_without_one(self):
+        manifest = cb.build_manifest("2026.11.02", TAGS, "0123456789abcdef")
+        self.assertEqual("", manifest["components"]["raccoon-cam"])
+
+
 class ManifestTests(unittest.TestCase):
     def test_manifest_is_readable_by_the_image_script(self):
         manifest = cb.build_manifest("2026.11.02", TAGS, "93ac36836810c9fe")
