@@ -200,11 +200,16 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     for key in INPUT_REPOS:
         parser.add_argument(f"--{key}", default="", help="release tag; empty = newest published release")
+    parser.add_argument("--skip-raccoon-cam", action="store_true",
+                        help="leave raccoon-cam out of the bundle (written as an empty tag)")
     args = parser.parse_args(argv)
     requested = {key: getattr(args, key.replace("-", "_")) for key in INPUT_REPOS}
 
     try:
-        tags = {key: resolve_tag(repo, requested[key]) for key, repo in INPUT_REPOS.items()}
+        tags = {
+            key: "" if key == "raccoon-cam" and args.skip_raccoon_cam else resolve_tag(repo, requested[key])
+            for key, repo in INPUT_REPOS.items()
+        }
         print("Resolved:", json.dumps(tags, indent=2))
         with tempfile.TemporaryDirectory() as scratch:
             contract_hash = gate(tags, Path(scratch))
