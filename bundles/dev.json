@@ -3,7 +3,7 @@
   "components": {
     "raccoon-lib": "v162",
     "raccoon-cli": "v186",
-    "stm32-data-reader": "v63",
+    "stm32-data-reader": "v64",
     "raccoon-cam": "",
     "botui": "v87",
     "raccoon-transport": "v75"
